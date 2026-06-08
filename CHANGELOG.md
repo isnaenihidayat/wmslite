@@ -10,3 +10,17 @@ Versioning mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.0] — 2026-06-08 (Sprint 0+1.1)
+
+### ✨ Added
+- init Sprint 0+1.1 — Audit API + Next.js 15 frontend foundation (`8c72653`)
+
+<details>
+<summary>📋 Detail Commits</summary>
+
+| Hash | Date | Message | Author |
+|------|------|---------|--------|
+| `8c72653` | 2026-06-08 | feat: init Sprint 0+1.1 — Audit API + Next.js 15 frontend foundation | Isnaeni Hidayat |
+
+</details>
+
