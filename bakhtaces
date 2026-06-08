@@ -1,0 +1,10 @@
+php_value date.timezone Asia/Jakarta
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /wmslite/index.php/
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /wmslite/index.php [L]
+</IfModule>

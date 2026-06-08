@@ -1,0 +1,59 @@
+# ============================================================
+# WMS Lite — .gitignore
+# ============================================================
+
+# ── OS / Editor ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# ── Yii / Legacy PHP Backend ─────────────────────────────────
+protected/runtime/
+protected/config/main-local.php
+assets/
+*.log
+*.cache
+uploads/private/
+*.zip
+*.tar.gz
+
+# ── Next.js Frontend ─────────────────────────────────────────
+apps/frontend/.next/
+apps/frontend/out/
+apps/frontend/node_modules/
+apps/frontend/.env.local
+apps/frontend/.env.*.local
+apps/frontend/npm-debug.log*
+apps/frontend/yarn-debug.log*
+apps/frontend/yarn-error.log*
+
+# ── Laravel Backend (Fase 2) ─────────────────────────────────
+apps/backend/vendor/
+apps/backend/node_modules/
+apps/backend/.env
+apps/backend/storage/logs/
+apps/backend/bootstrap/cache/
+apps/backend/public/storage/
+apps/backend/storage/app/public/
+
+# ── Build artifacts ──────────────────────────────────────────
+*.min.js
+*.min.css
+dist/
+build/
+
+# ── Secrets ──────────────────────────────────────────────────
+*.pem
+*.key
+*.cert
+.env
+.env.local
+.env.production

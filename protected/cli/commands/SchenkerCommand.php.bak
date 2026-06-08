@@ -1,0 +1,168 @@
+<?php
+
+class SchenkerCommand extends CConsoleCommand
+{
+
+    //php yiic.php sync inbound
+    public $connection;
+
+    public function __construct()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+        //$this->connection = new CDbConnection('mysql:host=localhost;dbname=wmslite', 'root', '');
+        $this->connection = new CDbConnection('mysql:host=localhost;dbname=wmslite', 'root', 'Buk4nM@!n@n$B*55');
+        $this->connection->active = true;
+    }
+
+    public function actionOutbound()
+    {
+
+        $sync_status = $this->connection->createCommand()
+            ->select('*')
+            ->from('el_sync_status')
+            ->where('sync_name=:sync_name', array(':sync_name' => 'all_outbound'))
+            ->andWhere('sync_status=:sync_status', array(':sync_status' => 'done'))
+            ->queryRow();
+
+        if (!empty($sync_status)) {
+
+            //update log processing inbound
+            $this->connection->createCommand()->update('el_sync_status', [
+                'sync_status' => 'processing',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => NULL,
+                'notes' => 'Sedang proses'
+            ], 'sync_name=:sync_name', array(':sync_name' => 'all_outbound'));
+
+
+            $curl = curl_init();
+
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => 'https://shield.dbschenker.com/shield/ngw-api-catalog/v1/wms/shipment/list',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => '{
+            "shipmentOrder": [
+              {
+                "shipmentOrderHeader": [
+                  {
+                    "storerKey": "IDGEHC"
+                  }
+                ]
+              }
+            ]
+          }',
+                CURLOPT_HTTPHEADER => array(
+                    'ngwSystemId: PRDO2_wmwhse153',
+                    'Content-Type: application/json',
+                    'Authorization: Basic MFFQSnRwcUIxUlhnakpVejpZIUxhY3xFdVxILlpqRXx4U3Vud3I9VEdQLGJyQip4eQ=='
+                ),
+            ));
+
+            $response = curl_exec($curl);
+
+            if (curl_errno($curl)) {
+                $error_msg = curl_error($curl);
+                die(var_dump($error_msg));
+                return $error_msg;
+            } else {
+                $result = json_decode($response);
+
+                if (!empty($result->result->shipmentOrder[0]->shipmentOrderHeader)) {
+
+                    $this->connection->createCommand('TRUNCATE table el_schenker_outbound_header_temp')->execute();
+                    $this->connection->createCommand('TRUNCATE table el_schenker_outbound_detail_temp')->execute();
+
+                    $headers = $result->result->shipmentOrder[0]->shipmentOrderHeader;
+                    foreach ($headers as $h) {
+
+                        if (!empty($h->actualShipDate)) {
+                            $date = DateTime::createFromFormat('d/m/Y H:i:s', $h->actualShipDate);
+                            // $actualShipDate = $date->format('Y-m-d H:i:s');
+
+                            #1. INSERT data Schenker ke el_schenker_outbound_header_temp
+                            $this->connection->createCommand()->insert('el_schenker_outbound_header_temp', [
+                                'ccompany' => $h->ccompany ?? '',
+                                'status' => $h->status ?? '',
+                                'serialKey' => $h->serialKey ?? '',
+                                'orderKey' => $h->orderKey ?? '',
+                                'externOrderKey' => $h->externOrderKey ?? '',
+                                'orderDate' => $h->orderDate ?? '',
+                                'priority' => $h->priority ?? '',
+                                'carrierName' => $h->carrierName ?? '',
+                                'buyerPO' => $h->buyerPO ?? '',
+                                'type' => $h->type ?? '',
+                                'actualShipDate' => $h->actualShipDate ?? '',
+                                'externalOrderKey2' => $h->externalOrderKey2 ?? '',
+                                'storerKey' => $h->storerKey ?? '',
+                                'created_at' => date('Y-m-d H:i:s'),
+                            ]);
+
+                            $header_id = $this->connection->getLastInsertID();
+
+
+                            #2. INSERT data Schenker ke el_schenker_outbound_detail_temp
+                            $details = $h->shipmentOrderDetail;
+                            foreach ($details as $d) {
+                                if (!empty(trim($d->sku))) {
+                                    if (!empty(trim($d->lottable07))) {
+
+                                        $this->connection->createCommand()->insert('el_schenker_outbound_detail_temp', [
+                                            'header_id' => $header_id,
+                                            'susr1' => $d->susr1 ?? '',
+                                            'orderLineNumber' => $d->orderLineNumber ?? '',
+                                            'externLineNo' => $d->externLineNo ?? '',
+                                            'storerKey' => $d->storerKey ?? '',
+                                            'sku' => $d->sku ?? '',
+                                            'packKey' => $d->packKey ?? '',
+                                            'uom' => $d->uom ?? '',
+                                            'openQty' => $d->openQty ?? '',
+                                            'orderKey' => $d->orderKey ?? '',
+                                            'orderDetailSysId' => $d->orderDetailSysId ?? '',
+                                            'externOrderKey' => $d->externOrderKey ?? '',
+                                            'status' => $d->status ?? '',
+                                            'lottable07' => $d->lottable07 ?? '',
+                                            'lottable08' => $d->lottable08 ?? '',
+                                            'created_at' => date('Y-m-d H:i:s'),
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_header RENAME el_schenker_outbound_header_x')->execute();
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_header_temp RENAME el_schenker_outbound_header')->execute();
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_header_x RENAME el_schenker_outbound_header_temp')->execute();
+                    $this->connection->createCommand('TRUNCATE table el_schenker_outbound_header_temp')->execute();
+
+
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_detail RENAME el_schenker_outbound_detail_x')->execute();
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_detail_temp RENAME el_schenker_outbound_detail')->execute();
+                    $this->connection->createCommand('ALTER TABLE el_schenker_outbound_detail_x RENAME el_schenker_outbound_detail_temp')->execute();
+                    $this->connection->createCommand('TRUNCATE table el_schenker_outbound_detail_temp')->execute();
+
+
+                    $notes =  'Sync done' . PHP_EOL;
+                    echo $notes . PHP_EOL;
+
+                    //update log done all_outbound
+                    $this->connection->createCommand()->update('el_sync_status', [
+                        'sync_status' => 'done',
+                        'updated_at' => date('Y-m-d H:i:s'),
+                        'notes' => $notes,
+                    ], 'sync_name=:sync_name', array(':sync_name' => 'all_outbound'));
+                }
+            }
+        } else {
+            $notes =  'Masih ada process sync all_outbound yang sedang berjalan' . PHP_EOL;
+            echo $notes . PHP_EOL;
+        }
+    }
+}
