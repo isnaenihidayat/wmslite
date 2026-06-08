@@ -36,12 +36,12 @@ interface NavItem {
 
 const mainNav: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Shipment", href: "/shipment", icon: Ship, types: [1, 2] },
-  { title: "Inbound", href: "/inbound", icon: PackageCheck, types: [1] },
-  { title: "Outbound", href: "/outbound", icon: PackageOpen, types: [1] },
-  { title: "Moving", href: "/moving", icon: ArrowLeftRight, types: [1] },
-  { title: "Monitoring", href: "/monitoring", icon: Activity, types: [1, 2] },
-  { title: "Reports", href: "/reports", icon: BarChart3, types: [1, 2] },
+  { title: "Shipment", href: "/shipment", icon: Ship },
+  { title: "Inbound", href: "/inbound", icon: PackageOpen },
+  { title: "Outbound", href: "/outbound", icon: PackageCheck },
+  { title: "Moving", href: "/moving", icon: ArrowLeftRight, types: [1, 3] },
+  { title: "Monitoring", href: "/monitoring", icon: Activity },
+  { title: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
 const masterNav: NavItem[] = [
