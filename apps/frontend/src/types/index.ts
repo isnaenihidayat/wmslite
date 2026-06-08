@@ -112,18 +112,20 @@ export type OutboundStatus = "created" | "inprogress" | "successful";
 
 export interface OutboundHeader {
   id: number;
-  qty: number | null;
-  po: string | null;
+  qty: number;
+  po: string;
   destination: string;
-  checker: string;
-  docfile: string | null;
+  delivery_id: string;
+  transporter: string;
+  checker?: string;
+  docfile?: string;
+  scan_time?: string;
   date_created: string;
-  date_updated: string | null;
-  status: OutboundStatus;
-  delivery_id: number | null;
-  transporter: string | null;
-  created_by: number | null;
-  updated_by: number | null;
+  date_updated: string;
+  status: string;
+  warehouse?: string;
+  created_by?: number | null;
+  updated_by?: number | null;
 }
 
 export interface OutboundDetail {
