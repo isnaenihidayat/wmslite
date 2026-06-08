@@ -10,6 +10,20 @@ Versioning mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.0] — 2026-06-08 (Sprint 1.2)
+
+### 📝 Documentation
+- tambah README.md monorepo + dokumentasi scripts (`149d4b8`)
+
+<details>
+<summary>📋 Detail Commits</summary>
+
+| Hash | Date | Message | Author |
+|------|------|---------|--------|
+| `149d4b8` | 2026-06-08 | docs: tambah README.md monorepo + dokumentasi scripts | Isnaeni Hidayat |
+
+</details>
+
 ## [0.1.0] — 2026-06-08 (Sprint 0+1.1)
 
 ### ✨ Added

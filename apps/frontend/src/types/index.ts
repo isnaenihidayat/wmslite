@@ -34,27 +34,27 @@ export interface Shipment {
   id: number;
   hawb: string;
   descr: string;
-  product_category_id: number | null;
+  product_category_id?: number | null;
   product_category_name?: string;
-  modality: string | null;
-  delivery_id: string | null;
-  qty: number | null;
-  po: string | null;
-  locator: string;
-  docfile: string;
-  checker: string;
+  modality: string;
+  delivery_id: string;
+  qty: number;
+  po: string;
+  ship_method: string;
+  warehouse?: string;
+  locator?: string;
+  docfile?: string;
   date_created: string;
-  date_updated: string | null;
-  status: ShipmentStatus;
-  ship_method: ShipMethod;
-  etd: string | null;
-  eta: string | null;
-  ata: string | null;
-  pib_number: string | null;
-  sppb_date: string | null;
-  from_shipment: 0 | 1;
-  created_by: number | null;
-  updated_by: number | null;
+  date_updated: string;
+  status: string;         // flexible — keep as string for all status values
+  etd: string;
+  eta: string;
+  ata: string;
+  sppb_date: string;
+  from_shipment?: 0 | 1;
+  created_by?: number | null;
+  updated_by?: number | null;
+  countloc?: number;
 }
 
 // ===========================
@@ -268,4 +268,39 @@ export interface StatsCard {
   trendValue?: string;
   icon?: React.ComponentType<{ className?: string }>;
   color?: "blue" | "green" | "orange" | "red" | "purple";
+}
+
+// ===========================
+// FORM DATA TYPES
+// ===========================
+
+export interface ShipmentFormData {
+  hawb: string;
+  hawb_descr?: string;
+  delivery_id_in?: string;
+  modality_in?: string;
+  po_number?: string;
+  qty?: number;
+  ship_method?: string;
+  etd?: string;
+  eta?: string;
+  ata?: string;
+  sppb_date?: string;
+  warehouse_in: string;
+  product_category_in?: number;
+}
+
+// ===========================
+// ALIAS / COMPAT TYPES
+// ===========================
+
+/** Alias for Yii response */
+export type LegacyResponse = YiiResponse;
+
+/** Yii DataTables list response with raw aaData as unknown[][] */
+export interface LegacyListResponse {
+  sEcho: number;
+  iTotalRecords: number | string;
+  iTotalDisplayRecords: number | string;
+  aaData: unknown[][];
 }
