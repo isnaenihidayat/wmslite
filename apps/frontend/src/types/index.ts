@@ -67,28 +67,27 @@ export interface InboundHeader {
   id: number;
   hawb: string;
   descr: string;
-  product_category_id: number | null;
+  product_category_id?: number | null;
   product_category_name?: string;
-  modality: string | null;
-  delivery_id: number | null;
-  qty: number | null;
-  po: string | null;
+  modality: string;
+  delivery_id: string;
+  qty?: number;
+  po: string;
   locator: string;
-  docfile: string;
-  checker: string;
+  warehouse?: string;
   date_created: string;
-  date_updated: string | null;
-  status: InboundStatus;
-  ship_method: ShipMethod;
-  etd: string | null;
-  eta: string | null;
-  ata: string | null;
-  pib_number: string | null;
-  sppb_date: string | null;
+  date_updated: string;
+  status: string;
+  etd: string;
+  eta: string;
+  ata: string;
+  sppb_date: string;
   totalQtyReceived?: number;
   itemInDetail?: number;
   totalPick?: number;
-  from_shipment: 0 | 1;
+  from_shipment?: 0 | 1;
+  created_by?: number | null;
+  updated_by?: number | null;
 }
 
 export interface InboundDetail {
