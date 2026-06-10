@@ -81,8 +81,12 @@ export function AppHeader({ title }: HeaderProps) {
 
         {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" className="flex items-center gap-2 h-9 px-2">
+            <DropdownMenuTrigger>
+            <div
+              role="button"
+              tabIndex={0}
+              className="flex items-center gap-2 h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+            >
               <Avatar className="h-7 w-7">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                   {initials}
@@ -94,7 +98,7 @@ export function AppHeader({ title }: HeaderProps) {
                   {isAdmin ? "Admin" : USER_TYPE_LABEL[userType]}
                 </p>
               </div>
-            </Button>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,36 +30,56 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import type { InboundHeader } from "@/types";
-import type { InboundFormData } from "@/lib/api/inbound.service";
+import type { Inbound as InboundHeader, InboundFormData } from "@/lib/api/inbound.service";
+import { fetchCategories } from "@/lib/api/master.service";
+
+// ── Schema ────────────────────────────────────────────────────────────────────
 
 const inboundSchema = z.object({
-  hawb: z.string().min(1, "HAWB wajib diisi").max(100),
-  hawb_descr: z.string().optional(),
-  delivery_id: z.string().optional(),
-  modality: z.string().optional(),
-  po: z.string().optional(),
-  qty: z.number().nonnegative().optional(),
-  locator: z.string().optional(),
-  etd: z.string().optional(),
-  eta: z.string().optional(),
-  ata: z.string().optional(),
-  sppb_date: z.string().optional(),
-  warehouse: z.string().min(1, "Warehouse wajib dipilih"),
+  hawb:                z.string().min(1, "HAWB wajib diisi").max(100),
+  descr:               z.string().optional(),
+  delivery_id:         z.string().optional(),
+  product_category_id: z.number().nullable().optional(),
+  modality:            z.string().optional(),
+  po:                  z.string().optional(),
+  qty:                 z.number().nonnegative().optional(),
+  locator:             z.string().optional(),
+  etd:                 z.string().optional(),
+  eta:                 z.string().optional(),
+  ata:                 z.string().optional(),
+  status:              z.string().optional(),
 });
 
 type InboundSchema = z.infer<typeof inboundSchema>;
 
 const MODALITY_OPTIONS = ["Sea", "Air", "Land", "Rail"];
-const WAREHOUSE_OPTIONS = ["arcadia", "cengkareng", "surabaya", "default"];
+const STATUS_OPTIONS   = [
+  { value: "inprogress",           label: "In Progress" },
+  { value: "created",              label: "Created" },
+  { value: "started",              label: "Started" },
+  { value: "Warehouse in Transit", label: "WH in Transit" },
+  { value: "successful",           label: "Successful" },
+  { value: "failed",               label: "Failed" },
+  { value: "cancelled",            label: "Cancelled" },
+];
+
+// ── Helper: strip ISO datetime to date-only for <input type="date">
+function toDateInput(val: string | null | undefined): string {
+  if (!val) return "";
+  return val.split("T")[0].split(" ")[0]; // handles "2024-01-15" or "2024-01-15T00:00:00Z"
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface InboundFormSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  inbound?: InboundHeader | null;
-  onSubmit: (data: InboundFormData, id?: number) => void;
+  open:          boolean;
+  onOpenChange:  (open: boolean) => void;
+  inbound?:      InboundHeader | null;
+  onSubmit:      (data: InboundFormData, id?: number) => void;
   isSubmitting?: boolean;
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function InboundFormSheet({
   open,
@@ -69,58 +90,72 @@ export function InboundFormSheet({
 }: InboundFormSheetProps) {
   const isEdit = !!inbound;
 
+  // Fetch categories for dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ["master", "categories"],
+    queryFn: fetchCategories,
+    staleTime: 5 * 60_000,
+  });
+
   const form = useForm<InboundSchema>({
     resolver: zodResolver(inboundSchema),
     defaultValues: {
-      hawb: "",
-      hawb_descr: "",
-      delivery_id: "",
-      modality: "",
-      po: "",
-      qty: undefined,
-      locator: "",
-      etd: "",
-      eta: "",
-      ata: "",
-      sppb_date: "",
-      warehouse: "default",
+      hawb:                "",
+      descr:               "",
+      delivery_id:         "",
+      product_category_id: null,
+      modality:            "",
+      po:                  "",
+      qty:                 undefined,
+      locator:             "",
+      etd:                 "",
+      eta:                 "",
+      ata:                 "",
+      status:              "inprogress",
     },
   });
 
   useEffect(() => {
-    if (inbound) {
-      form.reset({
-        hawb: inbound.hawb,
-        hawb_descr: inbound.descr,
-        delivery_id: inbound.delivery_id?.toString() || "",
-        modality: inbound.modality || "",
-        po: inbound.po || "",
-        locator: inbound.locator || "",
-        etd: inbound.etd?.split(" ")[0] || "",
-        eta: inbound.eta?.split(" ")[0] || "",
-        ata: inbound.ata?.split(" ")[0] || "",
-        sppb_date: inbound.sppb_date?.split(" ")[0] || "",
-        warehouse: "default",
-      });
-    } else {
-      form.reset();
+    if (open) {
+      if (inbound) {
+        form.reset({
+          hawb:                inbound.hawb,
+          descr:               inbound.descr || "",
+          delivery_id:         inbound.delivery_id?.toString() || "",
+          product_category_id: inbound.product_category_id ?? null,
+          modality:            inbound.modality || "",
+          po:                  inbound.po || "",
+          qty:                 inbound.qty ? Number(inbound.qty) : undefined,
+          locator:             inbound.locator || "",
+          etd:                 toDateInput(inbound.etd),
+          eta:                 toDateInput(inbound.eta),
+          ata:                 toDateInput(inbound.ata),
+          status:              inbound.status || "inprogress",
+        });
+      } else {
+        form.reset({
+          hawb: "", descr: "", delivery_id: "",
+          product_category_id: null, modality: "", po: "",
+          qty: undefined, locator: "", etd: "", eta: "", ata: "", status: "inprogress",
+        });
+      }
     }
-  }, [inbound, form]);
+  }, [open, inbound, form]);
 
   const handleSubmit = (values: InboundSchema) => {
     const data: InboundFormData = {
-      hawb: values.hawb,
-      hawb_descr: values.hawb_descr || "",
-      delivery_id_in: values.delivery_id || "",
-      modality_in: values.modality || "",
-      po_number: values.po || "",
-      qty: values.qty,
-      locator_number: values.locator || "",
-      etd: values.etd || "",
-      eta: values.eta || "",
-      ata: values.ata || "",
-      sppb_date: values.sppb_date || "",
-      warehouse_in: values.warehouse,
+      hawb:                values.hawb,
+      descr:               values.descr || values.hawb,
+      product_category_id: values.product_category_id ?? null,
+      modality:            values.modality || undefined,
+      delivery_id:         values.delivery_id ? Number(values.delivery_id) : undefined,
+      po:                  values.po || undefined,
+      qty:                 values.qty !== undefined ? String(values.qty) : undefined,
+      locator:             values.locator || undefined,
+      etd:                 values.etd || undefined,
+      eta:                 values.eta || undefined,
+      ata:                 values.ata || undefined,
+      status:              values.status || "inprogress",
     };
     onSubmit(data, inbound?.id);
   };
@@ -139,6 +174,7 @@ export function InboundFormSheet({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4" noValidate>
+
             {/* HAWB */}
             <FormField
               control={form.control}
@@ -154,9 +190,10 @@ export function InboundFormSheet({
               )}
             />
 
+            {/* Description */}
             <FormField
               control={form.control}
-              name="hawb_descr"
+              name="descr"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
@@ -168,6 +205,60 @@ export function InboundFormSheet({
               )}
             />
 
+            {/* Category + Modality */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="product_category_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      value={field.value?.toString() ?? ""}
+                      onValueChange={(v) => field.onChange(v ? Number(v) : null)}
+                    >
+                      <FormControl>
+                        <SelectTrigger id="select-inb-category">
+                          <SelectValue placeholder="Pilih kategori..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">— Tanpa kategori —</SelectItem>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="modality"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modality</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <FormControl>
+                        <SelectTrigger id="select-inb-modality">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">— None —</SelectItem>
+                        {MODALITY_OPTIONS.map((o) => (
+                          <SelectItem key={o} value={o}>{o}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Delivery ID + PO */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -197,29 +288,8 @@ export function InboundFormSheet({
               />
             </div>
 
+            {/* Qty + Locator */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="modality"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Modality</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger id="select-inb-modality">
-                          <SelectValue placeholder="Select..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MODALITY_OPTIONS.map((o) => (
-                          <SelectItem key={o} value={o}>{o}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="qty"
@@ -232,6 +302,7 @@ export function InboundFormSheet({
                         type="number"
                         min={0}
                         placeholder="0"
+                        value={field.value ?? ""}
                         onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                         id="input-inb-qty"
                       />
@@ -240,23 +311,23 @@ export function InboundFormSheet({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="locator"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Oracle Locator</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. WH-A01-01" id="input-inb-locator" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <FormField
-              control={form.control}
-              name="locator"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Oracle Locator</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g. WH-A01-01" id="input-inb-locator" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+            {/* ETD / ETA / ATA */}
+            <div className="grid grid-cols-3 gap-3">
               <FormField control={form.control} name="etd" render={({ field }) => (
                 <FormItem>
                   <FormLabel>ETD</FormLabel>
@@ -278,38 +349,35 @@ export function InboundFormSheet({
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="sppb_date" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SPPB Date</FormLabel>
-                  <FormControl><Input {...field} type="date" id="input-inb-sppb" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
             </div>
 
-            <FormField
-              control={form.control}
-              name="warehouse"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Warehouse <span className="text-destructive">*</span></FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger id="select-inb-warehouse">
-                        <SelectValue placeholder="Select warehouse..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {WAREHOUSE_OPTIONS.map((o) => (
-                        <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Status (edit only) */}
+            {isEdit && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "inprogress"}>
+                      <FormControl>
+                        <SelectTrigger id="select-inb-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
+            {/* Buttons */}
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={isSubmitting} className="flex-1" id="btn-inb-submit">
                 {isSubmitting ? (

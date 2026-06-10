@@ -1,7 +1,8 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import type { InboundHeader } from "@/types";
+import type { Inbound as InboundHeader } from "@/lib/api/inbound.service";
+import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import { Button } from "@/components/ui/button";
@@ -54,11 +55,11 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       size: 180,
     },
     {
-      accessorKey: "product_category_name",
+      id: "category",
       header: "Category",
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {row.getValue("product_category_name") || "—"}
+          {row.original.category?.name ?? "—"}
         </span>
       ),
       size: 110,
@@ -101,25 +102,25 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       accessorKey: "etd",
       header: ({ column }) => <SortableHeader column={column} label="ETD" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("etd") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("etd"))}</span>
       ),
-      size: 85,
+      size: 90,
     },
     {
       accessorKey: "eta",
       header: ({ column }) => <SortableHeader column={column} label="ETA" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("eta") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("eta"))}</span>
       ),
-      size: 85,
+      size: 90,
     },
     {
       accessorKey: "ata",
       header: "ATA",
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("ata") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("ata"))}</span>
       ),
-      size: 85,
+      size: 90,
     },
     {
       accessorKey: "status",
@@ -127,25 +128,25 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
       size: 120,
     },
-    // ── Qty summary columns
+    // ── Qty/Items columns
     {
-      accessorKey: "totalQtyReceived",
-      header: "Qty Recv",
+      accessorKey: "qty",
+      header: "Qty",
       cell: ({ row }) => {
-        const qty = row.getValue("totalQtyReceived") as number;
+        const qty = row.getValue("qty") as string | null;
         return (
-          <span className={`text-xs text-right block font-mono ${qty > 0 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground"}`}>
-            {qty > 0 ? qty : "—"}
+          <span className={`text-xs text-right block font-mono ${qty ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground"}`}>
+            {qty || "—"}
           </span>
         );
       },
       size: 70,
     },
     {
-      accessorKey: "itemInDetail",
+      accessorKey: "items_total",
       header: "Items",
       cell: ({ row }) => {
-        const items = row.getValue("itemInDetail") as number;
+        const items = row.getValue("items_total") as number;
         return (
           <span className="text-xs text-right block font-mono text-muted-foreground">
             {items > 0 ? items : "—"}
@@ -155,10 +156,10 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       size: 60,
     },
     {
-      accessorKey: "totalPick",
+      accessorKey: "items_picked",
       header: "Picked",
       cell: ({ row }) => {
-        const picked = row.getValue("totalPick") as number;
+        const picked = row.getValue("items_picked") as number;
         return (
           <span className={`text-xs text-right block font-mono ${picked > 0 ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}>
             {picked > 0 ? picked : "—"}
@@ -172,10 +173,10 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       header: ({ column }) => <SortableHeader column={column} label="Created" />,
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {row.getValue("date_created") || "—"}
+          {formatDate(row.getValue("date_created"))}
         </span>
       ),
-      size: 140,
+      size: 100,
     },
     // ── Actions
     {
@@ -184,7 +185,7 @@ export function getInboundColumns(opts: ColumnOptions = {}): ColumnDef<InboundHe
       enableHiding: false,
       cell: ({ row }) => {
         const inbound = row.original;
-        const hasItems = (inbound.itemInDetail ?? 0) > 0;
+        const hasItems = (inbound.items_total ?? 0) > 0;
 
         return (
           <DropdownMenu>

@@ -15,9 +15,14 @@ export const outboundKeys = {
 };
 
 export function useOutboundList(params: OutboundListParams) {
+  const laravelParams = {
+    ...params,
+    page: (params.page ?? 0) + 1,
+    per_page: params.per_page ?? 25,
+  };
   return useQuery({
     queryKey: outboundKeys.list(params),
-    queryFn: () => fetchOutboundList(params),
+    queryFn: () => fetchOutboundList(laravelParams),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
@@ -27,13 +32,14 @@ export function useCreateOutbound() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (form: OutboundFormData) => createOutbound(form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Outbound berhasil dibuat.");
-        qc.invalidateQueries({ queryKey: outboundKeys.all });
-      } else toast.error(res.msg || "Gagal membuat outbound.");
+    onSuccess: () => {
+      toast.success("Outbound berhasil dibuat.");
+      qc.invalidateQueries({ queryKey: outboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal membuat outbound.";
+      toast.error(msg);
+    },
   });
 }
 
@@ -42,13 +48,14 @@ export function useUpdateOutbound() {
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<OutboundFormData> }) =>
       updateOutbound(id, form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Outbound berhasil diperbarui.");
-        qc.invalidateQueries({ queryKey: outboundKeys.all });
-      } else toast.error(res.msg || "Gagal memperbarui outbound.");
+    onSuccess: () => {
+      toast.success("Outbound berhasil diperbarui.");
+      qc.invalidateQueries({ queryKey: outboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal memperbarui outbound.";
+      toast.error(msg);
+    },
   });
 }
 
@@ -56,12 +63,13 @@ export function useDeleteOutbound() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteOutbound(id),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Outbound berhasil dihapus.");
-        qc.invalidateQueries({ queryKey: outboundKeys.all });
-      } else toast.error(res.msg || "Gagal menghapus outbound.");
+    onSuccess: () => {
+      toast.success("Outbound berhasil dihapus.");
+      qc.invalidateQueries({ queryKey: outboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal menghapus outbound.";
+      toast.error(msg);
+    },
   });
 }

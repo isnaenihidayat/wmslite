@@ -1,4 +1,7 @@
 import { apiClient } from "@/lib/api/client";
+import type { PaginatedResponse } from "./shipment.service";
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
   totalShipments: number;
@@ -23,130 +26,167 @@ export interface StatusCount {
   count: number;
 }
 
-/**
- * Fetch dashboard summary stats by hitting the list endpoints with small page size.
- * The Yii backend doesn't have a dedicated summary/stats endpoint, so we aggregate from list responses.
- */
+export interface LaravelDashboardResponse {
+  data: {
+    total_shipments: number;
+    total_inbound: number;
+    outbound_active: number;
+    outbound_done: number;
+    recent_shipments: {
+      id: number;
+      hawb: string;
+      descr: string;
+      status: string;
+      date_created: string;
+      eta: string | null;
+    }[];
+    recent_outbound: {
+      id: number;
+      po: string | null;
+      destination: string;
+      qty: string | null;
+      status: string;
+      date_created: string;
+    }[];
+    status_breakdown: { status: string; count: number }[];
+  };
+}
+
+// ── API Functions ─────────────────────────────────────────────────────────────
+
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const baseParams = "sEcho=1&iDisplayStart=0&iDisplayLength=5";
+  const response = await apiClient.get<LaravelDashboardResponse>(
+    "/dashboard/stats"
+  );
 
-  const [shipRes, inboundRes, outboundRes] = await Promise.allSettled([
-    apiClient.get(`/ajax/shlist?${baseParams}`),
-    apiClient.get(`/ajax/inlist?${baseParams}`),
-    apiClient.get(`/ajax/outlist?${baseParams}`),
-  ]);
+  const d = response.data.data;
 
-  // ── Shipment
-  const shipData = shipRes.status === "fulfilled" ? shipRes.value.data : null;
-  const totalShipments = Number(shipData?.iTotalRecords ?? 0);
-  const recentInbound: RecentItem[] = (shipData?.aaData ?? []).slice(0, 5).map((row: unknown[]) => ({
-    id: String(row[0] ?? ""),
-    label: String(row[1] ?? "—"),           // hawb
-    sublabel: String(row[2] ?? ""),          // descr
-    status: String(row[6] ?? "").replace(/<[^>]+>/g, "").trim(), // status
-    date: String(row[7] ?? ""),              // date_created
+  const recentInbound: RecentItem[] = d.recent_shipments.map((s) => ({
+    id:       s.id,
+    label:    s.hawb,
+    sublabel: s.descr,
+    status:   s.status,
+    date:     s.date_created,
   }));
 
-  // ── Inbound
-  const inboundData = inboundRes.status === "fulfilled" ? inboundRes.value.data : null;
-  const inboundTotal = Number(inboundData?.iTotalRecords ?? 0);
-
-  // ── Outbound
-  const outboundData = outboundRes.status === "fulfilled" ? outboundRes.value.data : null;
-  const activeOutbound = Number(outboundData?.iTotalRecords ?? 0);
-  const recentOutbound: RecentItem[] = (outboundData?.aaData ?? []).slice(0, 5).map((row: unknown[]) => ({
-    id: Number(row[0] ?? 0),
-    label: String(row[2] ?? "—"),           // po/GON
-    sublabel: String(row[3] ?? ""),          // destination
-    status: String(row[9] ?? "").replace(/<[^>]+>/g, "").trim(), // status
-    date: String(row[6] ?? ""),
+  const recentOutbound: RecentItem[] = d.recent_outbound.map((o) => ({
+    id:       o.id,
+    label:    o.po ?? `#${o.id}`,
+    sublabel: o.destination,
+    status:   o.status,
+    date:     o.date_created,
   }));
 
-  // status breakdown from outbound
-  const statusCounts: Record<string, number> = {};
-  (outboundData?.aaData ?? []).forEach((row: unknown[]) => {
-    const s = String(row[9] ?? "").replace(/<[^>]+>/g, "").trim().toLowerCase();
-    statusCounts[s] = (statusCounts[s] ?? 0) + 1;
-  });
-  const statusBreakdown: StatusCount[] = Object.entries(statusCounts).map(([status, count]) => ({
-    status,
-    count,
+  const statusBreakdown: StatusCount[] = d.status_breakdown.map((s) => ({
+    status: s.status,
+    count:  s.count,
   }));
 
   return {
-    totalShipments,
-    inboundInTransit: inboundTotal,
-    activeOutbound,
-    successfulOutbound: statusCounts["successful"] ?? 0,
+    totalShipments:   d.total_shipments,
+    inboundInTransit: d.total_inbound,
+    activeOutbound:   d.outbound_active,
+    successfulOutbound: d.outbound_done,
     recentInbound,
     recentOutbound,
     statusBreakdown,
   };
 }
 
-// ── Report endpoints
+// ── Report endpoints ──────────────────────────────────────────────────────────
+
 export type ReportType = "shipment" | "inbound" | "outbound" | "inventory";
 
 export interface ReportParams {
   type: ReportType;
   startDate: string;
   endDate: string;
-  page: number;
-  pageSize: number;
-  search?: string;
+  page?: number;
+  per_page?: number;
 }
 
 export interface ReportRow {
-  [key: string]: string | number;
+  [key: string]: string | number | null;
 }
 
 export interface ReportResult {
-  columns: string[];
+  columns: ReportColumn[];
   data: ReportRow[];
   total: number;
+  lastPage: number;
 }
 
-const REPORT_ENDPOINT_MAP: Record<ReportType, string> = {
-  inbound: "/ajax/getReportsIn",
-  shipment: "/ajax/getReportsSh",
-  outbound: "/ajax/getReportsOuts",
-  inventory: "/ajax/getReportsInv",
-};
+export interface ReportColumn {
+  key: string;
+  label: string;
+}
 
-const REPORT_COLUMNS_MAP: Record<ReportType, string[]> = {
-  inbound: ["HAWB", "Description", "PO", "Locator", "Koli", "Loc", "PIB No.", "SPPB Date", "Created", "Updated", "Checker", "Scan Time"],
-  shipment: ["HAWB", "Description", "Delivery ID", "Modality", "PO", "Locator", "ETD", "ETA", "ATA", "Status", "Created"],
-  outbound: ["HAWB", "Part No.", "Lot No.", "Loc", "GON/PO", "Destination", "Checker", "Created", "Scan Time"],
-  inventory: ["HAWB", "Part No.", "Lot No.", "Qty", "Loc", "Locator", "Checker", "Scan Time", "Status"],
+const REPORT_COLUMNS_MAP: Record<ReportType, ReportColumn[]> = {
+  shipment: [
+    { key: "id",           label: "ID" },
+    { key: "hawb",         label: "HAWB" },
+    { key: "descr",        label: "Description" },
+    { key: "modality",     label: "Modality" },
+    { key: "qty",          label: "Qty" },
+    { key: "po",           label: "PO Number" },
+    { key: "locator",      label: "Locator" },
+    { key: "status",       label: "Status" },
+    { key: "etd",          label: "ETD" },
+    { key: "eta",          label: "ETA" },
+    { key: "ata",          label: "ATA" },
+    { key: "date_created", label: "Created" },
+  ],
+  inbound: [
+    { key: "id",           label: "ID" },
+    { key: "hawb",         label: "HAWB" },
+    { key: "descr",        label: "Description" },
+    { key: "modality",     label: "Modality" },
+    { key: "qty",          label: "Qty" },
+    { key: "po",           label: "PO Number" },
+    { key: "locator",      label: "Locator" },
+    { key: "status",       label: "Status" },
+    { key: "etd",          label: "ETD" },
+    { key: "eta",          label: "ETA" },
+    { key: "ata",          label: "ATA" },
+    { key: "date_created", label: "Created" },
+  ],
+  outbound: [
+    { key: "id",           label: "ID" },
+    { key: "po",           label: "GON / PO" },
+    { key: "destination",  label: "Destination" },
+    { key: "transporter",  label: "Transporter" },
+    { key: "qty",          label: "Qty" },
+    { key: "status",       label: "Status" },
+    { key: "date_created", label: "Created" },
+    { key: "date_updated", label: "Updated" },
+  ],
+  inventory: [
+    { key: "hawb",      label: "HAWB" },
+    { key: "descr",     label: "Description" },
+    { key: "loc",       label: "Location" },
+    { key: "weight",    label: "Weight (kg)" },
+    { key: "flag",      label: "Picked" },
+    { key: "scan_time", label: "Scan Time" },
+  ],
 };
 
 export async function fetchReport(params: ReportParams): Promise<ReportResult> {
-  const endpoint = REPORT_ENDPOINT_MAP[params.type];
-  const start = params.page * params.pageSize;
-  const qs = new URLSearchParams({
-    sEcho: "1",
-    iDisplayStart: String(start),
-    iDisplayLength: String(params.pageSize),
-    start_date: params.startDate,
-    end_date: params.endDate,
-    ...(params.search ? { sSearch: params.search } : {}),
-  }).toString();
-
-  const res = await apiClient.get(`${endpoint}?${qs}`);
-  const raw = res.data;
-  const cols = REPORT_COLUMNS_MAP[params.type];
-
-  const data: ReportRow[] = (raw.aaData ?? []).map((row: unknown[]) => {
-    const obj: ReportRow = {};
-    cols.forEach((col, i) => {
-      obj[col] = String(row[i] ?? "");
-    });
-    return obj;
-  });
+  const response = await apiClient.get<PaginatedResponse<ReportRow>>(
+    `/reports/${params.type}`,
+    {
+      params: {
+        start_date: params.startDate,
+        end_date:   params.endDate,
+        page:       params.page ?? 1,
+        per_page:   params.per_page ?? 100,
+      },
+    }
+  );
 
   return {
-    columns: cols,
-    data,
-    total: Number(raw.iTotalRecords ?? data.length),
+    columns:  REPORT_COLUMNS_MAP[params.type],
+    data:     response.data.data,
+    total:    response.data.meta.total,
+    lastPage: response.data.meta.last_page,
   };
 }

@@ -10,7 +10,7 @@ import {
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import type { OutboundHeader } from "@/types";
+import type { Outbound as OutboundHeader } from "@/lib/api/outbound.service";
 import {
   Package,
   Truck,
@@ -113,7 +113,7 @@ export function OutboundDetailSheet({
               <div className="rounded-lg border bg-card p-3">
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Total Qty</p>
                 <p className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
-                  {outbound.qty > 0 ? outbound.qty : "—"}
+                  {outbound.qty || "—"}
                 </p>
               </div>
               <div className={`rounded-lg border p-3 ${isSuccessful ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-card"}`}>
@@ -158,7 +158,6 @@ export function OutboundDetailSheet({
               </p>
               <div className="rounded-lg border divide-y">
                 <InfoRow label="Date Created" value={outbound.date_created} icon={Calendar} />
-                <InfoRow label="Scan Time" value={outbound.scan_time} icon={Clock} />
                 <InfoRow label="Last Modified" value={outbound.date_updated} icon={Calendar} />
               </div>
             </div>

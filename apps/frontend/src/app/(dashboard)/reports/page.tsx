@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { PaginationState } from "@tanstack/react-table";
+import { PaginationState, ColumnDef } from "@tanstack/react-table";
 import { useReport } from "@/hooks/use-dashboard";
 import { DataTable } from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/data-table/status-badge";
 import {
   BarChart3,
   Download,
@@ -28,50 +29,83 @@ import {
   PackageOpen,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ColumnDef } from "@tanstack/react-table";
-import type { ReportType, ReportRow } from "@/lib/api/dashboard.service";
+import { formatDate } from "@/lib/utils";
+import type { ReportType, ReportRow, ReportColumn } from "@/lib/api/dashboard.service";
 
-// ── default dates
+// ── default dates (last 7 days)
 function defaultDates() {
   const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 7);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
   return {
-    start: yesterday.toISOString().slice(0, 10),
-    end: today.toISOString().slice(0, 10),
+    start: weekAgo.toISOString().slice(0, 10),
+    end:   today.toISOString().slice(0, 10),
   };
 }
 
-const REPORT_OPTIONS: { value: ReportType; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }[] = [
-  { value: "shipment", label: "Shipment Report", icon: Ship },
-  { value: "inbound", label: "Inbound Report", icon: PackageOpen, adminOnly: true },
-  { value: "outbound", label: "Outbound Report", icon: PackageCheck, adminOnly: true },
-  { value: "inventory", label: "Inventory Report", icon: Package, adminOnly: true },
+const REPORT_OPTIONS: {
+  value: ReportType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+}[] = [
+  { value: "shipment",  label: "Shipment Report",  icon: Ship },
+  { value: "inbound",   label: "Inbound Report",   icon: PackageOpen,  adminOnly: true },
+  { value: "outbound",  label: "Outbound Report",  icon: PackageCheck, adminOnly: true },
+  { value: "inventory", label: "Inventory Report", icon: Package,      adminOnly: true },
 ];
 
-function buildColumns(cols: string[]): ColumnDef<ReportRow>[] {
-  return cols.map((col) => ({
-    accessorKey: col,
-    header: col,
-    cell: ({ row }) => (
-      <span className="text-xs max-w-[180px] truncate block" title={String(row.getValue(col))}>
-        {String(row.getValue(col) ?? "") || "—"}
-      </span>
-    ),
-    size: 130,
+// ── Date & status columns
+const DATE_KEYS   = new Set(["etd","eta","ata","date_created","date_updated","scan_time"]);
+const STATUS_KEYS = new Set(["status"]);
+
+function buildColumns(cols: ReportColumn[]): ColumnDef<ReportRow>[] {
+  return cols.map(({ key, label }) => ({
+    accessorKey: key,
+    header: label,
+    cell: ({ row }) => {
+      const val = row.getValue(key);
+
+      if (STATUS_KEYS.has(key) && typeof val === "string") {
+        return <StatusBadge status={val} />;
+      }
+      if (DATE_KEYS.has(key)) {
+        return (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {formatDate(val as string | null)}
+          </span>
+        );
+      }
+      if (key === "flag") {
+        return (
+          <Badge variant={val ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+            {val ? "Yes" : "No"}
+          </Badge>
+        );
+      }
+      return (
+        <span
+          className="text-xs max-w-[180px] truncate block"
+          title={String(val ?? "")}
+        >
+          {String(val ?? "") || "—"}
+        </span>
+      );
+    },
+    size: key === "id" ? 60 : key === "descr" ? 200 : 130,
   }));
 }
 
-function exportCSV(columns: string[], data: ReportRow[], filename: string) {
-  const header = columns.join(",");
+function exportCSV(columns: ReportColumn[], data: ReportRow[], filename: string) {
+  const header = columns.map((c) => c.label).join(",");
   const rows = data.map((row) =>
-    columns.map((col) => `"${String(row[col] ?? "").replace(/"/g, '""')}"`).join(",")
+    columns.map((c) => `"${String(row[c.key] ?? "").replace(/"/g, '""')}"`).join(",")
   );
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
@@ -79,29 +113,31 @@ function exportCSV(columns: string[], data: ReportRow[], filename: string) {
 
 export default function ReportsPage() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.admin === 1;
-  const userType = session?.user?.type ?? 0;
+  const isAdmin   = session?.user?.admin === 1;
+  const userType  = session?.user?.type ?? 0;
 
   const { start, end } = defaultDates();
   const [reportType, setReportType] = useState<ReportType>("shipment");
-  const [startDate, setStartDate] = useState(start);
-  const [endDate, setEndDate] = useState(end);
+  const [startDate,  setStartDate]  = useState(start);
+  const [endDate,    setEndDate]    = useState(end);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
-  const [search, setSearch] = useState("");
-  const [triggered, setTriggered] = useState(false);
+  const [search,     setSearch]     = useState("");
+  const [triggered,  setTriggered]  = useState(false);
 
   const availableReports = REPORT_OPTIONS.filter(
     (o) => !o.adminOnly || isAdmin || userType === 1 || userType === 3
   );
 
-  const reportParams = useMemo(() => ({
-    type: reportType,
-    startDate,
-    endDate,
-    page: pagination.pageIndex,
-    pageSize: pagination.pageSize,
-    search,
-  }), [reportType, startDate, endDate, pagination, search]);
+  const reportParams = useMemo(
+    () => ({
+      type:      reportType,
+      startDate,
+      endDate,
+      page:      pagination.pageIndex,
+      per_page:  pagination.pageSize,
+    }),
+    [reportType, startDate, endDate, pagination]
+  );
 
   const { data, isLoading, isFetching, refetch } = useReport(reportParams, triggered);
 
@@ -171,7 +207,10 @@ export default function ReportsPage() {
               <Label className="text-xs">Jenis Laporan</Label>
               <Select
                 value={reportType}
-                onValueChange={(v) => { setReportType(v as ReportType); setTriggered(false); }}
+                onValueChange={(v) => {
+                  setReportType(v as ReportType);
+                  setTriggered(false);
+                }}
               >
                 <SelectTrigger id="select-report-type" className="h-9">
                   <SelectValue />
@@ -237,7 +276,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Current selection info */}
+          {/* Result summary */}
           {triggered && data && (
             <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
               {currentReport && <currentReport.icon className="h-3.5 w-3.5" />}

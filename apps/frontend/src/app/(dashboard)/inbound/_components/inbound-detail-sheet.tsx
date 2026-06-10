@@ -10,7 +10,7 @@ import {
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import type { InboundHeader } from "@/types";
+import type { Inbound as InboundHeader } from "@/lib/api/inbound.service";
 import {
   Package,
   MapPin,
@@ -75,9 +75,9 @@ export function InboundDetailSheet({
 }: InboundDetailSheetProps) {
   if (!inbound && !isLoading) return null;
 
-  const qtyReceived = inbound?.totalQtyReceived ?? 0;
-  const items = inbound?.itemInDetail ?? 0;
-  const picked = inbound?.totalPick ?? 0;
+  const qtyReceived = Number(inbound?.qty ?? 0);
+  const items = inbound?.items_total ?? 0;
+  const picked = inbound?.items_picked ?? 0;
   const pickProgress = items > 0 ? Math.round((picked / items) * 100) : 0;
 
   return (
@@ -159,7 +159,7 @@ export function InboundDetailSheet({
               <div className="rounded-lg border divide-y">
                 <InfoRow label="HAWB" value={inbound.hawb} icon={Hash} />
                 <InfoRow label="Description" value={inbound.descr} icon={Package} />
-                <InfoRow label="Category" value={inbound.product_category_name} icon={Package} />
+                <InfoRow label="Category" value={inbound.category?.name} icon={Package} />
                 <InfoRow label="Delivery ID" value={inbound.delivery_id?.toString()} icon={Truck} />
                 <InfoRow label="PO Number" value={inbound.po} icon={Hash} />
                 <InfoRow label="Modality" value={inbound.modality} icon={Truck} />
@@ -185,7 +185,6 @@ export function InboundDetailSheet({
                 <InfoRow label="ETD" value={inbound.etd} icon={Calendar} />
                 <InfoRow label="ETA" value={inbound.eta} icon={Calendar} />
                 <InfoRow label="ATA" value={inbound.ata} icon={Calendar} />
-                <InfoRow label="SPPB Date" value={inbound.sppb_date} icon={Calendar} />
                 <InfoRow label="Date Created" value={inbound.date_created} icon={Calendar} />
                 <InfoRow label="Last Modified" value={inbound.date_updated} icon={Calendar} />
               </div>

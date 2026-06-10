@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 
 const loginSchema = z.object({
-  email_address: z.string().email("Please enter a valid email address"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -47,9 +47,8 @@ function LoginForm() {
     setIsLoading(true);
     try {
       const result = await signIn("credentials", {
-        email_address: data.email_address,
+        email: data.email,
         password: data.password,
-        type_module: "1",
         redirect: false,
       });
 
@@ -93,16 +92,16 @@ function LoginForm() {
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               <Input
-                id="email_address"
+                id="email"
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
                 className="border-white/10 bg-white/10 pl-9 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/30"
-                {...register("email_address")}
+                {...register("email")}
               />
             </div>
-            {errors.email_address && (
-              <p className="text-xs text-red-400">{errors.email_address.message}</p>
+            {errors.email && (
+              <p className="text-xs text-red-400">{errors.email.message}</p>
             )}
           </div>
 

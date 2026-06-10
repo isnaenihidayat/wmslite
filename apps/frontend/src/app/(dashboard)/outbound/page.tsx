@@ -31,7 +31,7 @@ import {
   useUpdateOutbound,
   useDeleteOutbound,
 } from "@/hooks/use-outbound";
-import type { OutboundHeader } from "@/types";
+import type { Outbound as OutboundHeader } from "@/lib/api/outbound.service";
 import type { OutboundFormData } from "@/lib/api/outbound.service";
 import { Plus, PackageCheck, TrendingUp } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -70,7 +70,7 @@ export default function OutboundPage() {
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex,
-      pageSize: pagination.pageSize,
+      per_page: pagination.pageSize,
       search: debouncedSearch,
       status: statusFilter !== "all" ? statusFilter : undefined,
     }),
@@ -102,13 +102,9 @@ export default function OutboundPage() {
   const handleFormSubmit = useCallback(
     (formData: OutboundFormData, id?: number) => {
       if (id) {
-        doUpdate({ id, form: formData }, {
-          onSuccess: (res) => { if (res.code === 1) setFormOpen(false); },
-        });
+        doUpdate({ id, form: formData }, { onSuccess: () => setFormOpen(false) });
       } else {
-        doCreate(formData, {
-          onSuccess: (res) => { if (res.code === 1) setFormOpen(false); },
-        });
+        doCreate(formData, { onSuccess: () => setFormOpen(false) });
       }
     },
     [doCreate, doUpdate]
@@ -140,7 +136,7 @@ export default function OutboundPage() {
   // Aggregate stats from current page
   const stats = useMemo(() => {
     const list = data?.data ?? [];
-    const totalQty = list.reduce((s, r) => s + (r.qty ?? 0), 0);
+    const totalQty = list.reduce((s, r) => s + Number(r.qty ?? 0), 0);
     const successCount = list.filter((r) => r.status === "successful").length;
     const inProgressCount = list.filter((r) => r.status === "inprogress").length;
     return { totalQty, successCount, inProgressCount };

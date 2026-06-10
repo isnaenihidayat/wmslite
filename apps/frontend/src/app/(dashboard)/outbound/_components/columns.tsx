@@ -1,7 +1,8 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import type { OutboundHeader } from "@/types";
+import type { Outbound as OutboundHeader } from "@/lib/api/outbound.service";
+import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import { Button } from "@/components/ui/button";
@@ -101,20 +102,20 @@ export function getOutboundColumns(opts: ColumnOptions = {}): ColumnDef<Outbound
       header: ({ column }) => <SortableHeader column={column} label="Created" />,
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {row.getValue("date_created") || "—"}
+          {formatDate(row.getValue("date_created"))}
         </span>
       ),
-      size: 140,
+      size: 100,
     },
     {
       accessorKey: "date_updated",
       header: "Last Modified",
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {row.getValue("date_updated") || "—"}
+          {formatDate(row.getValue("date_updated"))}
         </span>
       ),
-      size: 140,
+      size: 100,
     },
     // ── Actions
     {

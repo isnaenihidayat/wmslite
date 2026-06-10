@@ -1,20 +1,26 @@
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/wmslite/ajax";
+const LARAVEL_API = process.env.NEXT_PUBLIC_LARAVEL_API_URL || "http://localhost:8000/api";
 
-export const apiClient = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
+/**
+ * Laravel API Client — primary client for all WMS Lite API calls.
+ * Uses Bearer token (Sanctum) from session storage.
+ */
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: LARAVEL_API,
+  withCredentials: false, // Using Bearer token, not cookies
   headers: {
-    "Content-Type": "application/x-www-form-urlencoded",
+    "Content-Type": "application/json",
     Accept: "application/json",
   },
+  timeout: 15000,
 });
 
-// Request interceptor — inject auth token if available
+// Request interceptor — inject Bearer token from storage
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("wms_token");
+    const token = sessionStorage.getItem("wms_access_token") 
+      || localStorage.getItem("wms_access_token");
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -22,19 +28,15 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor — handle Yii error format (code: 2)
+// Response interceptor — handle auth + error responses
 apiClient.interceptors.response.use(
-  (response) => {
-    // Yii returns code=2 for errors, but HTTP 200
-    if (response.data && response.data.code === 2) {
-      return Promise.reject(new Error(response.data.msg || "Request failed"));
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Session expired — redirect to login
       if (typeof window !== "undefined") {
+        // Clear stale token
+        sessionStorage.removeItem("wms_access_token");
+        localStorage.removeItem("wms_access_token");
         window.location.href = "/login";
       }
     }
@@ -42,29 +44,50 @@ apiClient.interceptors.response.use(
   }
 );
 
-// ========================
-// Laravel API client (will be used in Phase 2)
-// ========================
-export const laravelClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_LARAVEL_API_URL || "http://localhost:8000/api",
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-laravelClient.interceptors.request.use((config) => {
+/**
+ * Inject a token programmatically (called after login).
+ * Stores in sessionStorage for the current browser session.
+ */
+export function setAuthToken(token: string): void {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("wms_token");
-    if (token) {
-      config.headers["Authorization"] = `Bearer ${token}`;
-    }
+    sessionStorage.setItem("wms_access_token", token);
   }
-  return config;
-});
+}
 
-// Convenience POST helper for Yii AJAX (form-urlencoded)
+/**
+ * Clear stored token (called on logout).
+ */
+export function clearAuthToken(): void {
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem("wms_access_token");
+    localStorage.removeItem("wms_access_token");
+  }
+}
+
+/**
+ * Create an authenticated client with a pre-set token.
+ * Use this in Server Components / API Routes where we have the session token.
+ */
+export function createAuthenticatedClient(token: string): AxiosInstance {
+  const client = axios.create({
+    baseURL: LARAVEL_API,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    timeout: 15000,
+  });
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => Promise.reject(error)
+  );
+
+  return client;
+}
+
+// Convenience helper to convert object to URLSearchParams (legacy Yii compat)
 export function toFormData(data: Record<string, unknown>): URLSearchParams {
   const params = new URLSearchParams();
   Object.entries(data).forEach(([key, val]) => {

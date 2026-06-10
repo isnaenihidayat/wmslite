@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/layout/sidebar";
 import { AppHeader } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { TokenSync } from "@/components/auth/token-sync";
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider session={session}>
+      <TokenSync />
       <TooltipProvider>
         <div className="flex h-screen overflow-hidden bg-background">
           {/* Sidebar */}

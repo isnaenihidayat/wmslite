@@ -158,16 +158,12 @@ export function DataTable<TData, TValue>({
 
           {/* Column visibility toggle */}
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 gap-1.5 text-xs"
-                id="btn-columns-visibility"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Columns
-              </Button>
+            <DropdownMenuTrigger
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              id="btn-columns-visibility"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Columns
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               {table

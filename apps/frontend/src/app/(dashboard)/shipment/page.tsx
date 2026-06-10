@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShipmentList, useCreateShipment, useUpdateShipment, useDeleteShipment } from "@/hooks/use-shipment";
-import type { Shipment, ShipmentFormData } from "@/types";
+import type { Shipment } from "@/lib/api/shipment.service";
+import type { ShipmentFormData } from "@/lib/api/shipment.service";
 import { Plus, Ship } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
@@ -69,7 +70,7 @@ export default function ShipmentPage() {
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex,
-      pageSize: pagination.pageSize,
+      per_page: pagination.pageSize,
       search: debouncedSearch,
       status: statusFilter !== "all" ? statusFilter : undefined,
     }),
@@ -102,14 +103,9 @@ export default function ShipmentPage() {
   const handleFormSubmit = useCallback(
     (formData: ShipmentFormData, id?: number) => {
       if (id) {
-        doUpdate(
-          { id, form: formData },
-          { onSuccess: (res) => { if (res.code === 1) setFormOpen(false); } }
-        );
+        doUpdate({ id, form: formData }, { onSuccess: () => setFormOpen(false) });
       } else {
-        doCreate(formData, {
-          onSuccess: (res) => { if (res.code === 1) setFormOpen(false); },
-        });
+        doCreate(formData, { onSuccess: () => setFormOpen(false) });
       }
     },
     [doCreate, doUpdate]
@@ -117,10 +113,7 @@ export default function ShipmentPage() {
 
   const handleConfirmDelete = useCallback(() => {
     if (!deleteTarget) return;
-    doDelete(
-      { hawb: deleteTarget.hawb, deliveryId: deleteTarget.delivery_id },
-      { onSuccess: () => setDeleteTarget(null) }
-    );
+    doDelete(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
   }, [deleteTarget, doDelete]);
 
   // ── Columns ───────────────────────────────────────────────────────────────────

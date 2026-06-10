@@ -31,8 +31,7 @@ import {
   useUpdateInbound,
   useDeleteInbound,
 } from "@/hooks/use-inbound";
-import type { InboundHeader } from "@/types";
-import type { InboundFormData } from "@/lib/api/inbound.service";
+import type { InboundFormData, Inbound as InboundRecord } from "@/lib/api/inbound.service";
 import { Plus, PackageOpen } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -72,14 +71,14 @@ export default function InboundPage() {
   }, [debouncedSearch, statusFilter, warehouseFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editInbound, setEditInbound] = useState<InboundHeader | null>(null);
-  const [detailInbound, setDetailInbound] = useState<InboundHeader | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<InboundHeader | null>(null);
+  const [editInbound, setEditInbound] = useState<InboundRecord | null>(null);
+  const [detailInbound, setDetailInbound] = useState<InboundRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<InboundRecord | null>(null);
 
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex,
-      pageSize: pagination.pageSize,
+      per_page: pagination.pageSize,
       search: debouncedSearch,
       status: statusFilter !== "all" ? statusFilter : undefined,
       warehouse: warehouseFilter !== "all" ? warehouseFilter : undefined,
@@ -92,16 +91,16 @@ export default function InboundPage() {
   const { mutate: doUpdate, isPending: isUpdating } = useUpdateInbound();
   const { mutate: doDelete, isPending: isDeleting } = useDeleteInbound();
 
-  const handleEdit = useCallback((row: InboundHeader) => {
+  const handleEdit = useCallback((row: InboundRecord) => {
     setEditInbound(row);
     setFormOpen(true);
   }, []);
 
-  const handleDelete = useCallback((row: InboundHeader) => {
+  const handleDelete = useCallback((row: InboundRecord) => {
     setDeleteTarget(row);
   }, []);
 
-  const handleDetails = useCallback((row: InboundHeader) => {
+  const handleDetails = useCallback((row: InboundRecord) => {
     setDetailInbound(row);
   }, []);
 
@@ -109,11 +108,11 @@ export default function InboundPage() {
     (formData: InboundFormData, id?: number) => {
       if (id) {
         doUpdate({ id, form: formData }, {
-          onSuccess: (res) => { if (res.code === 1) setFormOpen(false); },
+          onSuccess: () => setFormOpen(false),
         });
       } else {
         doCreate(formData, {
-          onSuccess: (res) => { if (res.code === 1) setFormOpen(false); },
+          onSuccess: () => setFormOpen(false),
         });
       }
     },
@@ -122,10 +121,7 @@ export default function InboundPage() {
 
   const handleConfirmDelete = useCallback(() => {
     if (!deleteTarget) return;
-    doDelete(
-      { hawb: deleteTarget.hawb, deliveryId: deleteTarget.delivery_id?.toString() ?? "" },
-      { onSuccess: () => setDeleteTarget(null) }
-    );
+    doDelete(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
   }, [deleteTarget, doDelete]);
 
   const columns = useMemo(
@@ -149,9 +145,9 @@ export default function InboundPage() {
   const stats = useMemo(() => {
     const list = data?.data ?? [];
     return {
-      totalItems: list.reduce((s, r) => s + (r.itemInDetail ?? 0), 0),
-      totalQtyReceived: list.reduce((s, r) => s + (r.totalQtyReceived ?? 0), 0),
-      totalPicked: list.reduce((s, r) => s + (r.totalPick ?? 0), 0),
+      totalItems:      list.reduce((s, r) => s + (r.items_total ?? 0), 0),
+      totalQtyReceived: list.reduce((s, r) => s + Number(r.qty ?? 0), 0),
+      totalPicked:     list.reduce((s, r) => s + (r.items_picked ?? 0), 0),
     };
   }, [data?.data]);
 
@@ -273,9 +269,9 @@ export default function InboundPage() {
             <AlertDialogDescription>
               Anda akan menghapus inbound{" "}
               <span className="font-semibold text-foreground">{deleteTarget?.hawb}</span>.
-              {(deleteTarget?.itemInDetail ?? 0) > 0 && (
+              {(deleteTarget?.items_total ?? 0) > 0 && (
                 <span className="block mt-1 text-destructive font-medium">
-                  ⚠ Record ini memiliki {deleteTarget?.itemInDetail} item detail.
+                  ⚠ Record ini memiliki {deleteTarget?.items_total} item detail.
                 </span>
               )}
               Tindakan ini tidak dapat dibatalkan.

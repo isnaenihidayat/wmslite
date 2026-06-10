@@ -1,113 +1,109 @@
 import { apiClient } from "@/lib/api/client";
-import type {
-  InboundHeader,
-  LegacyListResponse,
-  LegacyResponse,
-} from "@/types";
+import type { PaginatedResponse } from "./shipment.service";
 
-export interface InboundListParams {
-  page: number;
-  pageSize: number;
-  search?: string;
-  status?: string;
-  warehouse?: string;
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface Inbound {
+  id: number;
+  hawb: string;
+  descr: string;
+  product_category_id: number | null;
+  modality: string | null;
+  delivery_id: number | null;
+  qty: string | null;
+  po: string | null;
+  locator: string | null;
+  checker: string;
+  status: string;
+  etd: string | null;
+  eta: string | null;
+  ata: string | null;
+  date_created: string | null;
+  date_updated: string | null;
+  items_total?: number;
+  items_picked?: number;
+  category?: { id: number; name: string } | null;
 }
 
-function buildLegacyParams(params: InboundListParams) {
-  const start = params.page * params.pageSize;
-  const qs: Record<string, string | number> = {
-    sEcho: 1,
-    iDisplayStart: start,
-    iDisplayLength: params.pageSize,
-  };
-  if (params.search) qs["sSearch"] = params.search;
-  if (params.warehouse) qs["warehouse"] = params.warehouse;
-  return qs;
-}
-
-/**
- * GET inbound list from `actioninlist`
- * Data comes from view_schenker_inbound_combine VIEW
- * aaData field order:
- *  0:id, 1:hawb, 2:descr, 3:product_category_name, 4:modality,
- *  5:delivery_id, 6:po, 7:locator, 8:etd, 9:eta, 10:ata,
- *  11:sppb_date, 12:date_created, 13:date_updated, 14:status(HTML),
- *  15:totalQtyReceived, 16:itemInDetail, 17:totalPick, 18:action(HTML)
- */
-export async function fetchInboundList(
-  params: InboundListParams
-): Promise<{ data: InboundHeader[]; total: number }> {
-  const qs = buildLegacyParams(params);
-  const queryString = new URLSearchParams(
-    Object.entries(qs).map(([k, v]) => [k, String(v)])
-  ).toString();
-
-  const response = await apiClient.get<LegacyListResponse>(
-    `/ajax/inlist?${queryString}`
-  );
-  const raw = response.data;
-
-  const mapped: InboundHeader[] = (raw.aaData ?? []).map((row: unknown[]) => ({
-    id: Number(row[0]),
-    hawb: String(row[1] ?? ""),
-    descr: String(row[2] ?? ""),
-    product_category_name: String(row[3] ?? ""),
-    modality: String(row[4] ?? ""),
-    delivery_id: String(row[5] ?? ""),
-    po: String(row[6] ?? ""),
-    locator: String(row[7] ?? ""),
-    etd: String(row[8] ?? ""),
-    eta: String(row[9] ?? ""),
-    ata: String(row[10] ?? ""),
-    sppb_date: String(row[11] ?? ""),
-    date_created: String(row[12] ?? ""),
-    date_updated: String(row[13] ?? ""),
-    status: String(row[14] ?? "").replace(/<[^>]+>/g, "").trim(),
-    totalQtyReceived: Number(row[15] ?? 0),
-    itemInDetail: Number(row[16] ?? 0),
-    totalPick: Number(row[17] ?? 0),
-  }));
-
-  return { data: mapped, total: Number(raw.iTotalRecords ?? mapped.length) };
+export interface InboundDetail {
+  id?: number;
+  hawb: string;
+  descr: string;
+  loc: string;
+  weight: number | null;
+  long: number | null;
+  wide: number | null;
+  high: number | null;
+  flag: boolean;
+  scan_time: string | null;
 }
 
 export interface InboundFormData {
   hawb: string;
-  hawb_descr?: string;
-  delivery_id_in?: string;
-  modality_in?: string;
-  product_category_in?: number;
-  po_number?: string;
-  qty?: number;
-  locator_number?: string;
+  descr: string;
+  product_category_id?: number | null;
+  modality?: string;
+  delivery_id?: number | null;
+  qty?: string;
+  po?: string;
+  locator?: string;
   etd?: string;
   eta?: string;
   ata?: string;
-  sppb_date?: string;
-  warehouse_in: string;
-  filename?: string;
+  status?: string;
 }
 
-export async function createInbound(form: InboundFormData): Promise<LegacyResponse> {
-  const res = await apiClient.post<LegacyResponse>("/ajax/addIn", form);
-  return res.data;
+export interface InboundListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: string;
+  warehouse?: string;
+  sort?: string;
+  dir?: "asc" | "desc";
 }
 
-export async function updateInbound(id: number, form: Partial<InboundFormData>): Promise<LegacyResponse> {
-  const res = await apiClient.post<LegacyResponse>("/ajax/addIn", { ...form, idInb: id });
-  return res.data;
+// ── API Functions ─────────────────────────────────────────────────────────────
+
+export async function fetchInboundList(
+  params: InboundListParams
+): Promise<{ data: Inbound[]; total: number; lastPage: number }> {
+  const response = await apiClient.get<PaginatedResponse<Inbound>>(
+    "/inbound",
+    { params }
+  );
+  return {
+    data:     response.data.data,
+    total:    response.data.meta.total,
+    lastPage: response.data.meta.last_page,
+  };
 }
 
-export async function deleteInbound(hawb: string, deliveryId: string): Promise<LegacyResponse> {
-  const res = await apiClient.post<LegacyResponse>("/ajax/delInbound", {
-    hawb,
-    deliveryId,
-  });
-  return res.data;
+export async function fetchInbound(id: number): Promise<Inbound> {
+  const response = await apiClient.get<{ data: Inbound }>(`/inbound/${id}`);
+  return response.data.data;
 }
 
-/** Fetch detail koli for a specific HAWB */
-export async function fetchInboundDetails(hawb: string) {
-  const res = await apiClient.post("/ajax/getInboundDetails", { hawb });
-  return res.data;
+export async function fetchInboundDetails(id: number): Promise<InboundDetail[]> {
+  const response = await apiClient.get<{ data: InboundDetail[] }>(
+    `/inbound/${id}/details`
+  );
+  return response.data.data;
+}
+
+export async function createInbound(form: InboundFormData): Promise<Inbound> {
+  const response = await apiClient.post<{ data: Inbound }>("/inbound", form);
+  return response.data.data;
+}
+
+export async function updateInbound(
+  id: number,
+  form: Partial<InboundFormData>
+): Promise<Inbound> {
+  const response = await apiClient.put<{ data: Inbound }>(`/inbound/${id}`, form);
+  return response.data.data;
+}
+
+export async function deleteInbound(id: number): Promise<void> {
+  await apiClient.delete(`/inbound/${id}`);
 }

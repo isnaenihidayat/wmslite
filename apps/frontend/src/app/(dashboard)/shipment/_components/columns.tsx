@@ -1,7 +1,8 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import type { Shipment } from "@/types";
+import type { Shipment } from "@/lib/api/shipment.service";
+import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import { Button } from "@/components/ui/button";
@@ -52,11 +53,11 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
       size: 200,
     },
     {
-      accessorKey: "product_category_name",
+      id: "category",
       header: "Category",
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {row.getValue("product_category_name") || "—"}
+          {row.original.category?.name ?? "—"}
         </span>
       ),
       size: 120,
@@ -99,25 +100,25 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
       accessorKey: "etd",
       header: ({ column }) => <SortableHeader column={column} label="ETD" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("etd") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("etd"))}</span>
       ),
-      size: 90,
+      size: 95,
     },
     {
       accessorKey: "eta",
       header: ({ column }) => <SortableHeader column={column} label="ETA" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("eta") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("eta"))}</span>
       ),
-      size: 90,
+      size: 95,
     },
     {
       accessorKey: "ata",
       header: "ATA",
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("ata") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("ata"))}</span>
       ),
-      size: 90,
+      size: 95,
     },
     {
       accessorKey: "status",
@@ -129,9 +130,9 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
       accessorKey: "date_created",
       header: ({ column }) => <SortableHeader column={column} label="Created" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue("date_created") || "—"}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.getValue("date_created"))}</span>
       ),
-      size: 140,
+      size: 100,
     },
     // ── Actions column
     {

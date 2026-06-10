@@ -15,9 +15,15 @@ export const inboundKeys = {
 };
 
 export function useInboundList(params: InboundListParams) {
+  // Convert 0-indexed page to 1-indexed for Laravel
+  const laravelParams = {
+    ...params,
+    page: (params.page ?? 0) + 1,
+    per_page: params.per_page ?? 25,
+  };
   return useQuery({
     queryKey: inboundKeys.list(params),
-    queryFn: () => fetchInboundList(params),
+    queryFn: () => fetchInboundList(laravelParams),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
@@ -27,13 +33,14 @@ export function useCreateInbound() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (form: InboundFormData) => createInbound(form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Inbound berhasil ditambahkan.");
-        qc.invalidateQueries({ queryKey: inboundKeys.all });
-      } else toast.error(res.msg || "Gagal menambahkan inbound.");
+    onSuccess: () => {
+      toast.success("Inbound berhasil ditambahkan.");
+      qc.invalidateQueries({ queryKey: inboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal menambahkan inbound.";
+      toast.error(msg);
+    },
   });
 }
 
@@ -42,27 +49,28 @@ export function useUpdateInbound() {
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<InboundFormData> }) =>
       updateInbound(id, form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Inbound berhasil diperbarui.");
-        qc.invalidateQueries({ queryKey: inboundKeys.all });
-      } else toast.error(res.msg || "Gagal memperbarui inbound.");
+    onSuccess: () => {
+      toast.success("Inbound berhasil diperbarui.");
+      qc.invalidateQueries({ queryKey: inboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal memperbarui inbound.";
+      toast.error(msg);
+    },
   });
 }
 
 export function useDeleteInbound() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ hawb, deliveryId }: { hawb: string; deliveryId: string }) =>
-      deleteInbound(hawb, deliveryId),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Inbound berhasil dihapus.");
-        qc.invalidateQueries({ queryKey: inboundKeys.all });
-      } else toast.error(res.msg || "Gagal menghapus inbound.");
+    mutationFn: (id: number) => deleteInbound(id),
+    onSuccess: () => {
+      toast.success("Inbound berhasil dihapus.");
+      qc.invalidateQueries({ queryKey: inboundKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal menghapus inbound.";
+      toast.error(msg);
+    },
   });
 }

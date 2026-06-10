@@ -5,24 +5,26 @@ import {
   updateShipment,
   deleteShipment,
   type ShipmentListParams,
+  type ShipmentFormData,
 } from "@/lib/api/shipment.service";
-import type { ShipmentFormData } from "@/types";
 import { toast } from "sonner";
 
-// ── Query keys ────────────────────────────────────────────────────────────────
 export const shipmentKeys = {
   all: ["shipments"] as const,
   list: (params: ShipmentListParams) => ["shipments", "list", params] as const,
 };
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
-
 export function useShipmentList(params: ShipmentListParams) {
+  const laravelParams = {
+    ...params,
+    page: (params.page ?? 0) + 1,
+    per_page: params.per_page ?? 25,
+  };
   return useQuery({
     queryKey: shipmentKeys.list(params),
-    queryFn: () => fetchShipmentList(params),
+    queryFn: () => fetchShipmentList(laravelParams),
     staleTime: 30_000,
-    placeholderData: (prev) => prev, // keep previous data while loading
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -30,15 +32,14 @@ export function useCreateShipment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (form: ShipmentFormData) => createShipment(form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Shipment berhasil ditambahkan.");
-        qc.invalidateQueries({ queryKey: shipmentKeys.all });
-      } else {
-        toast.error(res.msg || "Gagal menambahkan shipment.");
-      }
+    onSuccess: () => {
+      toast.success("Shipment berhasil ditambahkan.");
+      qc.invalidateQueries({ queryKey: shipmentKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal menambahkan shipment.";
+      toast.error(msg);
+    },
   });
 }
 
@@ -47,31 +48,28 @@ export function useUpdateShipment() {
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<ShipmentFormData> }) =>
       updateShipment(id, form),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Shipment berhasil diperbarui.");
-        qc.invalidateQueries({ queryKey: shipmentKeys.all });
-      } else {
-        toast.error(res.msg || "Gagal memperbarui shipment.");
-      }
+    onSuccess: () => {
+      toast.success("Shipment berhasil diperbarui.");
+      qc.invalidateQueries({ queryKey: shipmentKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal memperbarui shipment.";
+      toast.error(msg);
+    },
   });
 }
 
 export function useDeleteShipment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ hawb, deliveryId }: { hawb: string; deliveryId: string }) =>
-      deleteShipment(hawb, deliveryId),
-    onSuccess: (res) => {
-      if (res.code === 1) {
-        toast.success("Shipment berhasil dihapus.");
-        qc.invalidateQueries({ queryKey: shipmentKeys.all });
-      } else {
-        toast.error(res.msg || "Gagal menghapus shipment.");
-      }
+    mutationFn: (id: number) => deleteShipment(id),
+    onSuccess: () => {
+      toast.success("Shipment berhasil dihapus.");
+      qc.invalidateQueries({ queryKey: shipmentKeys.all });
     },
-    onError: () => toast.error("Terjadi kesalahan. Coba lagi."),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || "Gagal menghapus shipment.";
+      toast.error(msg);
+    },
   });
 }
