@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
 
     // Shipments
+    Route::post('shipments/{id}/push-inbound', [ShipmentController::class, 'pushInbound'])->name('shipments.push-inbound');
     Route::apiResource('shipments', ShipmentController::class);
 
     // Inbound

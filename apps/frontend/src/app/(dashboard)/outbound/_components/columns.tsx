@@ -128,16 +128,12 @@ export function getOutboundColumns(opts: ColumnOptions = {}): ColumnDef<Outbound
 
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                id={`btn-action-out-${outbound.id}`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
+            <DropdownMenuTrigger
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none"
+              id={`btn-action-out-${outbound.id}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={() => opts.onDetails?.(outbound)}>

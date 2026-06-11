@@ -18,71 +18,72 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useShipmentList, useCreateShipment, useUpdateShipment, useDeleteShipment } from "@/hooks/use-shipment";
-import type { Shipment } from "@/lib/api/shipment.service";
-import type { ShipmentFormData } from "@/lib/api/shipment.service";
-import { Plus, Ship } from "lucide-react";
+import {
+  useShipmentList,
+  useCreateShipment,
+  useUpdateShipment,
+  useDeleteShipment,
+  usePushToInbound,
+} from "@/hooks/use-shipment";
+import type { Shipment, ShipmentFormData } from "@/lib/api/shipment.service";
+import { Plus, Ship, ArrowDownToLine, Loader2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { toast } from "sonner";
 
 // Status filter options
 const STATUS_OPTIONS = [
-  { value: "all", label: "All Status" },
-  { value: "created", label: "Created" },
-  { value: "started", label: "Started" },
-  { value: "inprogress", label: "In Progress" },
-  { value: "acknowledged", label: "Acknowledged" },
+  { value: "all",                  label: "All Status" },
+  { value: "created",              label: "Created" },
+  { value: "started",              label: "Started" },
+  { value: "inprogress",           label: "In Progress" },
+  { value: "acknowledged",         label: "Acknowledged" },
   { value: "Warehouse in Transit", label: "WH in Transit" },
-  { value: "successful", label: "Successful" },
-  { value: "failed", label: "Failed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "successful",           label: "Successful" },
+  { value: "failed",               label: "Failed" },
+  { value: "cancelled",            label: "Cancelled" },
 ];
 
 export default function ShipmentPage() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.admin === 1;
-  const userType = session?.user?.type ?? 0;
-  const canEdit = isAdmin || userType === 2;
-  const canDelete = isAdmin || userType === 2;
+  const isAdmin     = session?.user?.admin === 1;
+  const userType    = session?.user?.type ?? 0;
+  const canEdit     = isAdmin || userType === 2;
+  const canDelete   = isAdmin || userType === 2;
+  const canPush     = isAdmin || userType === 1 || userType === 2 || userType === 3;
 
-  // ── State ────────────────────────────────────────────────────────────────────
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 25,
-  });
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 400);
+  // ── Pagination & Filter State ─────────────────────────────────────────────
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
+  const [search, setSearch]         = useState("");
+  const debouncedSearch             = useDebounce(search, 400);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Reset page on search/filter change
   useEffect(() => {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
   }, [debouncedSearch, statusFilter]);
 
-  // Form sheet state
-  const [formOpen, setFormOpen] = useState(false);
-  const [editShipment, setEditShipment] = useState<Shipment | null>(null);
+  // ── Sheet / Dialog State ──────────────────────────────────────────────────
+  const [formOpen, setFormOpen]           = useState(false);
+  const [editShipment, setEditShipment]   = useState<Shipment | null>(null);
+  const [deleteTarget, setDeleteTarget]   = useState<Shipment | null>(null);
+  const [pushTarget, setPushTarget]       = useState<Shipment | null>(null);
 
-  // Delete confirm state
-  const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
-
-  // ── Data ─────────────────────────────────────────────────────────────────────
+  // ── Query & Mutations ─────────────────────────────────────────────────────
   const queryParams = useMemo(
     () => ({
-      page: pagination.pageIndex,
+      page:     pagination.pageIndex,
       per_page: pagination.pageSize,
-      search: debouncedSearch,
-      status: statusFilter !== "all" ? statusFilter : undefined,
+      search:   debouncedSearch,
+      status:   statusFilter !== "all" ? statusFilter : undefined,
     }),
     [pagination, debouncedSearch, statusFilter]
   );
 
-  const { data, isLoading, refetch } = useShipmentList(queryParams);
+  const { data, isLoading, refetch }            = useShipmentList(queryParams);
   const { mutate: doCreate, isPending: isCreating } = useCreateShipment();
   const { mutate: doUpdate, isPending: isUpdating } = useUpdateShipment();
   const { mutate: doDelete, isPending: isDeleting } = useDeleteShipment();
+  const { mutate: doPush,   isPending: isPushing }  = usePushToInbound();
 
-  // ── Handlers ──────────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleEdit = useCallback((row: Shipment) => {
     setEditShipment(row);
     setFormOpen(true);
@@ -92,12 +93,8 @@ export default function ShipmentPage() {
     setDeleteTarget(row);
   }, []);
 
-  const handleDetails = useCallback((row: Shipment) => {
-    toast.info(`HAWB: ${row.hawb} — Details coming in Sprint 1.3`);
-  }, []);
-
   const handlePushOutbound = useCallback((row: Shipment) => {
-    toast.info(`Push Outbound for HAWB: ${row.hawb} — Coming in Sprint 1.4`);
+    setPushTarget(row);
   }, []);
 
   const handleFormSubmit = useCallback(
@@ -116,18 +113,23 @@ export default function ShipmentPage() {
     doDelete(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
   }, [deleteTarget, doDelete]);
 
-  // ── Columns ───────────────────────────────────────────────────────────────────
+  const handleConfirmPush = useCallback(() => {
+    if (!pushTarget) return;
+    doPush(pushTarget.id, { onSuccess: () => setPushTarget(null), onError: () => setPushTarget(null) });
+  }, [pushTarget, doPush]);
+
+  // ── Columns ───────────────────────────────────────────────────────────────
   const columns = useMemo(
     () =>
       getShipmentColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        onDetails: handleDetails,
+        onEdit:        handleEdit,
+        onDelete:      handleDelete,
+        onDetails:     () => {/* handled inline */},
         onPushOutbound: handlePushOutbound,
         canEdit,
         canDelete,
       }),
-    [handleEdit, handleDelete, handleDetails, handlePushOutbound, canEdit, canDelete]
+    [handleEdit, handleDelete, handlePushOutbound, canEdit, canDelete]
   );
 
   const pageCount = useMemo(
@@ -205,6 +207,44 @@ export default function ShipmentPage() {
         onSubmit={handleFormSubmit}
         isSubmitting={isCreating || isUpdating}
       />
+
+      {/* ── Push to Inbound Confirm Dialog ── */}
+      <AlertDialog open={!!pushTarget} onOpenChange={(o) => !o && setPushTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ArrowDownToLine className="h-4 w-4 text-primary" />
+              Push Shipment → Inbound?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-1">
+              <span className="block">
+                Shipment{" "}
+                <span className="font-semibold text-foreground">{pushTarget?.hawb}</span>{" "}
+                akan di-salin ke modul <strong>Inbound</strong> sebagai record baru.
+              </span>
+              <span className="block text-xs">
+                Semua field (kategori, modality, ETD/ETA/ATA, PO, qty) akan ikut disalin.
+                Jika HAWB sudah ada di Inbound, operasi ini akan gagal.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPushing}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmPush}
+              disabled={isPushing}
+              className="gap-2"
+              id="btn-confirm-push-inbound"
+            >
+              {isPushing ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Memproses...</>
+              ) : (
+                <><ArrowDownToLine className="h-4 w-4" />Push ke Inbound</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Delete Confirm Dialog ── */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

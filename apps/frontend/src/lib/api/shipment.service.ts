@@ -93,3 +93,20 @@ export async function updateShipment(
 export async function deleteShipment(id: number): Promise<void> {
   await apiClient.delete(`/shipments/${id}`);
 }
+
+export interface PushInboundResponse {
+  message: string;
+  inbound_id: number;
+  data?: {
+    id: number;
+    hawb: string;
+    status: string;
+  };
+}
+
+export async function pushToInbound(id: number): Promise<PushInboundResponse> {
+  const response = await apiClient.post<PushInboundResponse>(
+    `/shipments/${id}/push-inbound`
+  );
+  return response.data;
+}

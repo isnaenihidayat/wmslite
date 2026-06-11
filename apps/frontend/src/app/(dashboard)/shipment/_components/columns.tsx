@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Eye, ArrowRight } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Eye, ArrowDownToLine } from "lucide-react";
 
 interface ColumnOptions {
   onEdit?: (row: Shipment) => void;
@@ -141,23 +141,17 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
       enableHiding: false,
       cell: ({ row }) => {
         const shipment = row.original;
-        const isTransit = shipment.status === "Warehouse in Transit";
-        const canDel = opts.canDelete && !shipment.id; // only if no inbound linked
 
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                id={`btn-action-${shipment.id}`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
+            <DropdownMenuTrigger
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none"
+              id={`btn-action-${shipment.id}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => opts.onDetails?.(shipment)}>
                 <Eye className="mr-2 h-4 w-4" />
                 Details
@@ -169,16 +163,14 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => opts.onPushOutbound?.(shipment)}
+                    className="text-primary focus:text-primary"
+                  >
+                    <ArrowDownToLine className="mr-2 h-4 w-4" />
+                    Push to Inbound
+                  </DropdownMenuItem>
                 </>
-              )}
-              {isTransit && opts.canEdit && (
-                <DropdownMenuItem
-                  onClick={() => opts.onPushOutbound?.(shipment)}
-                  className="text-primary"
-                >
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  Push Outbound
-                </DropdownMenuItem>
               )}
               {opts.canDelete && (
                 <>
@@ -186,7 +178,6 @@ export function getShipmentColumns(opts: ColumnOptions = {}): ColumnDef<Shipment
                   <DropdownMenuItem
                     onClick={() => opts.onDelete?.(shipment)}
                     className="text-destructive focus:text-destructive"
-                    disabled={!canDel}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

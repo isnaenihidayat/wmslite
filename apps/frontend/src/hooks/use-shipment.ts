@@ -4,9 +4,11 @@ import {
   createShipment,
   updateShipment,
   deleteShipment,
+  pushToInbound,
   type ShipmentListParams,
   type ShipmentFormData,
 } from "@/lib/api/shipment.service";
+import { inboundKeys } from "@/hooks/use-inbound";
 import { toast } from "sonner";
 
 export const shipmentKeys = {
@@ -70,6 +72,30 @@ export function useDeleteShipment() {
     onError: (err: { response?: { data?: { message?: string } } }) => {
       const msg = err?.response?.data?.message || "Gagal menghapus shipment.";
       toast.error(msg);
+    },
+  });
+}
+
+export function usePushToInbound() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => pushToInbound(id),
+    onSuccess: (data) => {
+      toast.success(data.message, {
+        description: `Inbound ID: ${data.inbound_id}`,
+        duration: 5000,
+      });
+      // Invalidate both shipments and inbounds list
+      qc.invalidateQueries({ queryKey: shipmentKeys.all });
+      qc.invalidateQueries({ queryKey: inboundKeys.all });
+    },
+    onError: (err: { response?: { data?: { message?: string; inbound_id?: number } } }) => {
+      const msg = err?.response?.data?.message || "Gagal push ke Inbound.";
+      const inboundId = err?.response?.data?.inbound_id;
+      toast.warning(msg, {
+        description: inboundId ? `Lihat Inbound ID: ${inboundId}` : undefined,
+        duration: 6000,
+      });
     },
   });
 }
