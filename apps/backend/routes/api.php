@@ -4,9 +4,12 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InboundController;
 use App\Http\Controllers\Api\MasterController;
+use App\Http\Controllers\Api\MonitoringController;
+use App\Http\Controllers\Api\MovingController;
 use App\Http\Controllers\Api\OutboundController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShipmentController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -57,5 +60,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('locations',  [MasterController::class, 'locations'])->name('locations');
         Route::get('categories', [MasterController::class, 'categories'])->name('categories');
         Route::get('recipients', [MasterController::class, 'recipients'])->name('recipients');
+    });
+
+    // Moving (Stock Transfer)
+    Route::get('moving',     [MovingController::class, 'index'])  ->name('moving.index');
+    Route::post('moving',    [MovingController::class, 'store'])  ->name('moving.store');
+    Route::delete('moving/{id}', [MovingController::class, 'destroy'])->name('moving.destroy');
+
+    // Monitoring (Activity Log — read only)
+    Route::get('monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
+
+    // Admin — User Management
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('users',                          [UserController::class, 'index'])        ->name('users.index');
+        Route::post('users',                         [UserController::class, 'store'])        ->name('users.store');
+        Route::put('users/{id}',                     [UserController::class, 'update'])       ->name('users.update');
+        Route::post('users/{id}/reset-password',     [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::delete('users/{id}',                  [UserController::class, 'destroy'])      ->name('users.destroy');
     });
 });

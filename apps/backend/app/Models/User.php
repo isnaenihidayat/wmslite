@@ -30,6 +30,8 @@ class User extends Authenticatable
         'admin',
         'module',
         'type',
+        'date_created',
+        'date_modified',
     ];
 
     protected $hidden = [
