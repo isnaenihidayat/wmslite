@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchInboundList,
+  fetchInboundDetails,
   createInbound,
   updateInbound,
   deleteInbound,
@@ -10,8 +11,9 @@ import {
 import { toast } from "sonner";
 
 export const inboundKeys = {
-  all: ["inbounds"] as const,
-  list: (params: InboundListParams) => ["inbounds", "list", params] as const,
+  all:     ["inbounds"] as const,
+  list:    (params: InboundListParams) => ["inbounds", "list", params] as const,
+  details: (id: number) => ["inbounds", "details", id] as const,
 };
 
 export function useInboundList(params: InboundListParams) {
@@ -26,6 +28,15 @@ export function useInboundList(params: InboundListParams) {
     queryFn: () => fetchInboundList(laravelParams),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useInboundDetails(id: number | null) {
+  return useQuery({
+    queryKey: inboundKeys.details(id ?? 0),
+    queryFn:  () => fetchInboundDetails(id!),
+    enabled:  id !== null && id > 0,
+    staleTime: 60_000,
   });
 }
 

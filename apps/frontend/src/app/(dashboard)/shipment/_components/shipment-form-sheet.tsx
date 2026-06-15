@@ -68,7 +68,9 @@ function toDateInput(val: string | null | undefined): string {
   return val.split("T")[0].split(" ")[0];
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// ── Props ───────────────────────────────────────────────────────────────────────────────
+
+type ServerErrors = Record<string, string[]>;
 
 interface ShipmentFormSheetProps {
   open:          boolean;
@@ -76,6 +78,33 @@ interface ShipmentFormSheetProps {
   shipment?:     Shipment | null;
   onSubmit:      (data: ShipmentFormData, id?: number) => void;
   isSubmitting?: boolean;
+}
+
+// Helper: map Laravel validation errors to RHF setError
+function applyServerErrors(
+  errors: ServerErrors,
+  setError: (field: keyof ShipmentSchema, err: { type: string; message: string }) => void
+) {
+  const fieldMap: Record<string, keyof ShipmentSchema> = {
+    hawb:                "hawb",
+    descr:               "descr",
+    delivery_id:         "delivery_id",
+    product_category_id: "product_category_id",
+    modality:            "modality",
+    po:                  "po",
+    qty:                 "qty",
+    locator:             "locator",
+    etd:                 "etd",
+    eta:                 "eta",
+    ata:                 "ata",
+    status:              "status",
+  };
+  Object.entries(errors).forEach(([field, messages]) => {
+    const rhfField = fieldMap[field];
+    if (rhfField) {
+      setError(rhfField, { type: "server", message: messages[0] });
+    }
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -147,7 +176,14 @@ export function ShipmentFormSheet({
       ata:                 values.ata || undefined,
       status:              values.status || "inprogress",
     };
-    onSubmit(data, shipment?.id);
+    // Delegate to parent; server errors will be set via setError if parent calls back
+    try {
+      onSubmit(data, shipment?.id);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { errors?: ServerErrors } } };
+      const serverErrors = axiosErr?.response?.data?.errors;
+      if (serverErrors) applyServerErrors(serverErrors, form.setError);
+    }
   };
 
   return (
