@@ -35,7 +35,6 @@ import type { Outbound as OutboundHeader } from "@/lib/api/outbound.service";
 import type { OutboundFormData } from "@/lib/api/outbound.service";
 import { Plus, PackageCheck, TrendingUp } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { toast } from "sonner";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
@@ -95,10 +94,6 @@ export default function OutboundPage() {
     setDetailOutbound(row);
   }, []);
 
-  const handlePrint = useCallback((row: OutboundHeader) => {
-    toast.info(`Print Picking List untuk GON: ${row.po} — Coming soon`);
-  }, []);
-
   const handleFormSubmit = useCallback(
     (formData: OutboundFormData, id?: number) => {
       if (id) {
@@ -121,11 +116,11 @@ export default function OutboundPage() {
         onEdit: handleEdit,
         onDelete: handleDelete,
         onDetails: handleDetails,
-        onPrint: handlePrint,
+        onPrint: () => {},  // Print handled inside OutboundDetailSheet
         canEdit,
         canDelete,
       }),
-    [handleEdit, handleDelete, handleDetails, handlePrint, canEdit, canDelete]
+    [handleEdit, handleDelete, handleDetails, canEdit, canDelete]
   );
 
   const pageCount = useMemo(
@@ -233,7 +228,6 @@ export default function OutboundPage() {
         open={!!detailOutbound}
         onOpenChange={(open) => !open && setDetailOutbound(null)}
         outbound={detailOutbound}
-        onPrint={handlePrint}
       />
 
       {/* ── Delete Dialog ── */}

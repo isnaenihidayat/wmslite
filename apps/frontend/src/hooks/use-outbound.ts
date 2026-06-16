@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchOutboundList,
+  fetchOutboundWithDetails,
   createOutbound,
   updateOutbound,
   deleteOutbound,
@@ -10,9 +11,19 @@ import {
 import { toast } from "sonner";
 
 export const outboundKeys = {
-  all: ["outbounds"] as const,
-  list: (params: OutboundListParams) => ["outbounds", "list", params] as const,
+  all:     ["outbounds"] as const,
+  list:    (params: OutboundListParams) => ["outbounds", "list", params] as const,
+  detail:  (id: number) => ["outbounds", "detail", id] as const,
 };
+
+export function useOutboundDetails(id: number | null) {
+  return useQuery({
+    queryKey: outboundKeys.detail(id ?? 0),
+    queryFn:  () => fetchOutboundWithDetails(id!),
+    enabled:  id !== null && id > 0,
+    staleTime: 60_000,
+  });
+}
 
 export function useOutboundList(params: OutboundListParams) {
   const laravelParams = {

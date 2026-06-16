@@ -19,6 +19,17 @@ export interface Outbound {
   delivery_id: number | null;
   transporter: string | null;
   category?: { id: number; name: string } | null;
+  details?: OutboundDetail[];
+}
+
+export interface OutboundDetail {
+  id: number;
+  hawb: string;
+  descr: string;
+  loc: string;
+  flag: number;
+  scan_time: string | null;
+  date_created: string | null;
 }
 
 export interface OutboundFormData {
@@ -57,6 +68,12 @@ export async function fetchOutboundList(
 }
 
 export async function fetchOutbound(id: number): Promise<Outbound> {
+  const response = await apiClient.get<{ data: Outbound }>(`/outbound/${id}`);
+  return response.data.data;
+}
+
+/** Fetch single outbound with eager-loaded details[] */
+export async function fetchOutboundWithDetails(id: number): Promise<Outbound> {
   const response = await apiClient.get<{ data: Outbound }>(`/outbound/${id}`);
   return response.data.data;
 }

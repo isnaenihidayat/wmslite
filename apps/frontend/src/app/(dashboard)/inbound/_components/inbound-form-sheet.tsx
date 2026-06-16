@@ -71,12 +71,30 @@ function toDateInput(val: string | null | undefined): string {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+type ServerErrors = Record<string, string[]>;
+
 interface InboundFormSheetProps {
   open:          boolean;
   onOpenChange:  (open: boolean) => void;
   inbound?:      InboundHeader | null;
   onSubmit:      (data: InboundFormData, id?: number) => void;
   isSubmitting?: boolean;
+}
+
+function applyServerErrors(
+  errors: ServerErrors,
+  setError: (field: keyof InboundSchema, err: { type: string; message: string }) => void
+) {
+  const fieldMap: Record<string, keyof InboundSchema> = {
+    hawb: "hawb", descr: "descr", delivery_id: "delivery_id",
+    product_category_id: "product_category_id", modality: "modality",
+    po: "po", qty: "qty", locator: "locator",
+    etd: "etd", eta: "eta", ata: "ata", status: "status",
+  };
+  Object.entries(errors).forEach(([field, messages]) => {
+    const rhfField = fieldMap[field];
+    if (rhfField) setError(rhfField, { type: "server", message: messages[0] });
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -157,7 +175,13 @@ export function InboundFormSheet({
       ata:                 values.ata || undefined,
       status:              values.status || "inprogress",
     };
-    onSubmit(data, inbound?.id);
+    try {
+      onSubmit(data, inbound?.id);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { errors?: ServerErrors } } };
+      const serverErrors = axiosErr?.response?.data?.errors;
+      if (serverErrors) applyServerErrors(serverErrors, form.setError);
+    }
   };
 
   return (
