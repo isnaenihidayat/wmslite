@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ApkController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InboundController;
@@ -60,6 +61,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('locations',  [MasterController::class, 'locations'])->name('locations');
         Route::get('categories', [MasterController::class, 'categories'])->name('categories');
         Route::get('recipients', [MasterController::class, 'recipients'])->name('recipients');
+
+        // APK Scanner Accounts
+        Route::get('apk',                           [ApkController::class, 'index'])        ->name('apk.index');
+        Route::post('apk',                          [ApkController::class, 'store'])        ->name('apk.store');
+        Route::put('apk/{id}',                      [ApkController::class, 'update'])       ->name('apk.update');
+        Route::post('apk/{id}/reset-password',      [ApkController::class, 'resetPassword'])->name('apk.reset-password');
+        Route::post('apk/{id}/logout',              [ApkController::class, 'logout'])       ->name('apk.logout');
+        Route::delete('apk/{id}',                   [ApkController::class, 'destroy'])      ->name('apk.destroy');
     });
 
     // Moving (Stock Transfer)
