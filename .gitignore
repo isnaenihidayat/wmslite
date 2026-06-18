@@ -57,3 +57,5 @@ build/
 .env
 .env.local
 .env.production
+.vibecode-backup*/
+.claude/hooks/.logs/
