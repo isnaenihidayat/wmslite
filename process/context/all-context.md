@@ -95,7 +95,7 @@ For most substantial tasks:
 | `process/context/auth/all-auth.md` | Dual-stack auth: NextAuth.js (frontend) + Laravel Sanctum (backend) — the Auth group entrypoint/router |
 | `process/context/database/all-database.md` | MySQL legacy schema shared by Yii and Laravel during transition — the Database group entrypoint/router |
 | `process/context/planning/all-planning.md` | Planning entrypoint — plan-shape calibration and SIMPLE vs COMPLEX examples for WMS Lite |
-| `process/context/tests/all-tests.md` | Testing entrypoint — PHPUnit for Laravel backend, no test runner yet on the Next.js frontend |
+| `process/context/tests/all-tests.md` | Testing entrypoint — PHPUnit for Laravel backend against a dedicated MySQL wmslite_test database, Vitest for the Next.js frontend |
 
 ## Current Context Groups
 
@@ -104,7 +104,7 @@ For most substantial tasks:
 | `auth/` | `process/context/auth/all-auth.md` | Dual-stack auth: NextAuth.js (frontend) + Laravel Sanctum (backend) — the Auth group entrypoint/router |
 | `database/` | `process/context/database/all-database.md` | MySQL legacy schema shared by Yii and Laravel during transition — the Database group entrypoint/router |
 | `planning/` | `process/context/planning/all-planning.md` | Planning entrypoint — plan-shape calibration and SIMPLE vs COMPLEX examples for WMS Lite |
-| `tests/` | `process/context/tests/all-tests.md` | Testing entrypoint — PHPUnit for Laravel backend, no test runner yet on the Next.js frontend |
+| `tests/` | `process/context/tests/all-tests.md` | Testing entrypoint — PHPUnit for Laravel backend against a dedicated MySQL wmslite_test database, Vitest for the Next.js frontend |
 <!-- /GENERATED:routing -->
 
 ## Task Routing Table
@@ -123,6 +123,7 @@ For most substantial tasks:
 | admin / user management work | `all-context.md` | `process/features/admin/_GUIDE.md`, then `active/` task folders |
 | reports module work | `all-context.md` | `process/features/reports/_GUIDE.md`, then `active/` task folders |
 | dashboard module work | `all-context.md` | `process/features/dashboard/_GUIDE.md`, then `active/` task folders |
+| go-live readiness program (testing, hardening, deployment, Yii cutover) | `all-context.md` | `process/features/go-live/_GUIDE.md`, then the umbrella plan in `active/go-live_19-06-26/` |
 | Yii-to-Laravel endpoint parity / API migration | `all-context.md` | `API_INVENTORY.md` (repo root) |
 | testing or verification | `all-context.md` | `process/context/tests/all-tests.md` |
 | creating a new plan | `all-context.md` | `process/context/planning/all-planning.md` |
