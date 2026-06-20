@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Moving extends Model
 {
+    use HasFactory;
+
     protected $table = 'el_moving';
 
     protected $primaryKey = 'id';

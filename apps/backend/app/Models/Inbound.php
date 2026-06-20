@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inbound extends Model
 {
+    use HasFactory;
+
     protected $table = 'el_inbound_header';
 
     protected $primaryKey = 'id';
