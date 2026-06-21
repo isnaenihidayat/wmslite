@@ -88,7 +88,7 @@ class InboundController extends Controller
     public function details(int $id): JsonResponse
     {
         $inbound = Inbound::inboundOnly()->findOrFail($id);
-        $details = $inbound->details()->orderBy('id')->get();
+        $details = $inbound->details()->orderBy('date_created')->get();
         return response()->json(['data' => $details]);
     }
 

@@ -26,4 +26,17 @@ describe("ApkPage", () => {
 
     expect(screen.getByRole("button", { name: /add account/i })).toBeTruthy();
   });
+
+  it("never renders the old Main/Staging/Testing labels", async () => {
+    renderWithQueryClient(<ApkPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("0 scanner accounts")).toBeTruthy();
+    });
+
+    // The old incorrect labels must never appear anywhere on the page.
+    expect(screen.queryByText(/— Testing/i)).toBeNull();
+    expect(screen.queryByText("Main (el_apk)")).toBeNull();
+    expect(screen.queryByText("Staging (el_apk_s)")).toBeNull();
+  });
 });

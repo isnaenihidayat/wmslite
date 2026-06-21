@@ -28,6 +28,19 @@ class ApkControllerTest extends TestCase
         return $user;
     }
 
+    /**
+     * Actor unauthorized for the ApkUserPolicy rule (E3: admin || type
+     * in [1, 3]). type=2 is neither admin nor 1/3, so this represents
+     * the 403 case for resetPassword/logout.
+     */
+    protected function actingUnauthorizedUser(): User
+    {
+        $user = User::factory()->create(['admin' => 0, 'type' => 2]);
+        $this->actingAs($user, 'sanctum');
+
+        return $user;
+    }
+
     public function test_index_returns_union_of_main_and_staging_with_source_table_and_is_logged_in(): void
     {
         $this->actingUser();
@@ -222,6 +235,22 @@ class ApkControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
+    public function test_reset_password_returns_403_for_unauthorized_user(): void
+    {
+        $this->actingUnauthorizedUser();
+
+        $apk = ApkUser::factory()->create(['token' => 'oldtoken']);
+
+        $response = $this->postJson("/api/master/apk/{$apk->id}/reset-password", [
+            'password' => 'newpass123',
+        ]);
+
+        $response->assertStatus(403);
+
+        $unchanged = DB::table('el_apk')->where('id', $apk->id)->first();
+        $this->assertSame('oldtoken', $unchanged->token);
+    }
+
     public function test_force_logout_clears_token(): void
     {
         $this->actingUser();
@@ -243,6 +272,20 @@ class ApkControllerTest extends TestCase
         $response = $this->postJson('/api/master/apk/999999/logout');
 
         $response->assertStatus(404);
+    }
+
+    public function test_force_logout_returns_403_for_unauthorized_user(): void
+    {
+        $this->actingUnauthorizedUser();
+
+        $apk = ApkUser::factory()->create(['token' => 'activetoken']);
+
+        $response = $this->postJson("/api/master/apk/{$apk->id}/logout");
+
+        $response->assertStatus(403);
+
+        $unchanged = DB::table('el_apk')->where('id', $apk->id)->first();
+        $this->assertSame('activetoken', $unchanged->token);
     }
 
     public function test_destroy_deletes_main_table_account(): void

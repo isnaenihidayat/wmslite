@@ -152,6 +152,8 @@ class ApkController extends Controller
      */
     public function resetPassword(Request $request, int $id): JsonResponse
     {
+        $this->authorize('resetPassword', ApkUser::class);
+
         $tbl    = $request->get('table', 'main') === 'staging' ? 'el_apk_s' : 'el_apk';
         $record = DB::table($tbl)->where('id', $id)->first();
 
@@ -177,6 +179,8 @@ class ApkController extends Controller
      */
     public function logout(Request $request, int $id): JsonResponse
     {
+        $this->authorize('logout', ApkUser::class);
+
         $tbl    = $request->get('table', 'main') === 'staging' ? 'el_apk_s' : 'el_apk';
         $record = DB::table($tbl)->where('id', $id)->first();
 

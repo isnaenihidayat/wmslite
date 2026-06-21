@@ -146,71 +146,63 @@ class ShipmentControllerTest extends TestCase
     }
 
     /**
-     * BACKLOG NOTE (discovered during Phase 1 test authoring, do not fix in this
-     * phase — out of blast radius per plan's Blockers section): pushInbound()
-     * creates a new Inbound row reusing the SAME hawb as the source shipment,
-     * but `el_inbound_header.hawb` has a global UNIQUE KEY constraint (see
-     * tables_schema.sql). Since the original shipment row is never deleted or
-     * renamed, the INSERT always violates the unique constraint and the
-     * endpoint currently returns HTTP 500 (PDOException: Integrity constraint
-     * violation 1062 Duplicate entry for key 'hawb') instead of HTTP 201 with
-     * a copied Inbound record. This test documents the ACTUAL current
-     * behavior (confirmed via direct execution against wmslite_test) rather
-     * than the originally-intended happy path. Recorded as a Phase 2+ backlog
-     * candidate in the phase report.
+     * go-live Phase 2 (B3a) fix: pushInbound() now transitions the shipment
+     * row in-place (from_shipment 1 -> 0, status -> inprogress) instead of
+     * creating a duplicate `el_inbound_header` row with the same `hawb`. The
+     * `inbound_id` returned is the SAME id as the originating shipment — see
+     * Public Contracts in phase-02-data-model-auth-hardening_PLAN_19-06-26.md.
+     * Closes
+     * process/features/go-live/backlog/shipment-push-inbound-bug_NOTE_20-06-26.md.
      */
-    public function test_push_inbound_currently_fails_with_500_due_to_duplicate_hawb_constraint(): void
+    public function test_push_inbound_updates_shipment_in_place(): void
     {
         $this->actingUser();
 
         $shipment = Inbound::factory()->fromShipment()->create([
             'hawb' => 'HAWB-PUSH0001',
             'descr' => 'Pushable shipment',
+            'status' => 'created',
         ]);
 
         $response = $this->postJson("/api/shipments/{$shipment->id}/push-inbound");
 
-        // Documents the real, currently-broken behavior: the unique `hawb`
-        // constraint on `el_inbound_header` rejects the duplicate insert
-        // because the source shipment row is never removed/renamed first.
-        $response->assertStatus(500);
+        $response->assertCreated()
+            ->assertJsonPath('inbound_id', $shipment->id)
+            ->assertJsonPath('data.id', $shipment->id)
+            ->assertJsonPath('data.from_shipment', false)
+            ->assertJsonPath('data.status', 'inprogress');
 
-        // Original shipment record is untouched (still from_shipment = 1,
-        // still present) since the failure happens at INSERT time, after the
-        // duplicate-inbound conflict-409 check already passed.
+        // Same row updated in place — no duplicate el_inbound_header row for this hawb.
+        $this->assertSame(1, Inbound::where('hawb', 'HAWB-PUSH0001')->count());
         $this->assertDatabaseHas('el_inbound_header', [
             'id' => $shipment->id,
-            'from_shipment' => 1,
+            'hawb' => 'HAWB-PUSH0001',
+            'from_shipment' => 0,
+            'status' => 'inprogress',
         ]);
     }
 
     /**
-     * BACKLOG NOTE (discovered during Phase 1 test authoring, do not fix in
-     * this phase): the conflict-409 branch in pushInbound() checks whether an
-     * Inbound::inboundOnly() record already exists with the same `hawb` as
-     * the shipment being pushed. However, `el_inbound_header.hawb` has a
-     * global UNIQUE KEY constraint spanning ALL rows (shipment rows AND
-     * inbound-only rows alike) — so a shipment row and an inbound-only row
-     * can never simultaneously share the same hawb value in the first place.
-     * This means the 409-conflict branch is effectively unreachable dead code
-     * against the real schema — see the detailed writeup in
-     * tests/Unit/ShipmentControllerPushInboundTest.php for why this is not
-     * force-tested via schema mutation. Recorded as a Phase 2+ backlog
-     * candidate alongside the 500-on-push-inbound bug above.
+     * go-live Phase 2 (B3a) fix: the 409 duplicate-hawb branch was removed
+     * since it is now unreachable — pushInbound() no longer creates a new
+     * row, so there is no way for a shipment row and an inbound-only row to
+     * collide on the same hawb via this endpoint. Pushing the same shipment
+     * a second time is idempotent: it simply re-applies the same update.
      */
-    public function test_push_inbound_conflict_branch_is_unreachable_via_real_db_state(): void
+    public function test_push_inbound_is_idempotent_when_called_twice(): void
     {
         $this->actingUser();
 
         $shipment = Inbound::factory()->fromShipment()->create(['hawb' => 'HAWB-CONFLICT01']);
 
-        // Attempting to create a second el_inbound_header row with the same
-        // hawb (simulating the precondition the 409 branch checks for) is
-        // rejected by the DB's own unique constraint — proving the 409
-        // branch can never trigger against real data.
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->postJson("/api/shipments/{$shipment->id}/push-inbound")->assertCreated();
+        $response = $this->postJson("/api/shipments/{$shipment->id}/push-inbound");
 
-        Inbound::factory()->create(['hawb' => 'HAWB-CONFLICT01']);
+        // Second call 404s via Inbound::shipments()->findOrFail() since the
+        // row is no longer from_shipment=1 after the first push.
+        $response->assertStatus(404);
+
+        $this->assertSame(1, Inbound::where('hawb', 'HAWB-CONFLICT01')->count());
     }
 
     public function test_index_requires_authentication(): void

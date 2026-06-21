@@ -220,11 +220,12 @@ export default function ShipmentPage() {
               <span className="block">
                 Shipment{" "}
                 <span className="font-semibold text-foreground">{pushTarget?.hawb}</span>{" "}
-                akan di-salin ke modul <strong>Inbound</strong> sebagai record baru.
+                akan berpindah ke modul <strong>Inbound</strong> — bukan record baru, record yang
+                sama akan diubah statusnya.
               </span>
               <span className="block text-xs">
-                Semua field (kategori, modality, ETD/ETA/ATA, PO, qty) akan ikut disalin.
-                Jika HAWB sudah ada di Inbound, operasi ini akan gagal.
+                Semua field (kategori, modality, ETD/ETA/ATA, PO, qty) tetap sama. Setelah ini,
+                record akan muncul di modul Inbound dan tidak lagi muncul di modul Shipment.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>

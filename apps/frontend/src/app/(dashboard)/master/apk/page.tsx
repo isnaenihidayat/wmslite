@@ -66,6 +66,7 @@ import {
   LogOut,
   Wifi,
   WifiOff,
+  AlertTriangle,
 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useForm } from "react-hook-form";
@@ -99,12 +100,19 @@ type CreateValues  = z.infer<typeof createSchema>;
 type EditValues    = z.infer<typeof editSchema>;
 type ResetPwValues = z.infer<typeof resetPwSchema>;
 
+// ── Display label helper ─────────────────────────────────────────────────────
+// Internal field/value contract ("main" | "staging") stays unchanged — this only
+// maps to the user-facing display label.
+function sourceTableLabel(table: "main" | "staging" | undefined): string {
+  return table === "main" ? "OTR" : "Service";
+}
+
 // ── Table filter options ──────────────────────────────────────────────────────
 
 const TABLE_OPTIONS = [
   { value: "all",     label: "All Tables" },
-  { value: "main",    label: "Main (el_apk)" },
-  { value: "staging", label: "Staging (el_apk_s)" },
+  { value: "main",    label: "OTR Module (el_apk)" },
+  { value: "staging", label: "Service Module (el_apk_s)" },
 ];
 
 // ── Columns ───────────────────────────────────────────────────────────────────
@@ -152,10 +160,10 @@ function getColumns(opts: {
       accessorKey: "source_table",
       header: "Table",
       cell: ({ row }) => {
-        const t = row.getValue("source_table") as string;
+        const t = row.getValue("source_table") as "main" | "staging";
         return (
           <Badge variant={t === "main" ? "default" : "secondary"} className="text-[10px] px-1.5">
-            {t === "main" ? "Main" : "Staging"}
+            {sourceTableLabel(t)}
           </Badge>
         );
       },
@@ -449,11 +457,24 @@ export default function ApkPage() {
                       <SelectTrigger id="select-apk-table-create"><SelectValue /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="main">Main (el_apk) — Production</SelectItem>
-                      <SelectItem value="staging">Staging (el_apk_s) — Testing</SelectItem>
+                      <SelectItem value="main">OTR Module (el_apk)</SelectItem>
+                      <SelectItem value="staging">Service Module (el_apk_s)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                  {field.value === "staging" && (
+                    <div
+                      role="alert"
+                      id="alert-apk-service-module-warning"
+                      className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300"
+                    >
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        Akun Service Module <strong>tidak dapat login</strong> ke aplikasi scanner.
+                        Gunakan tipe ini hanya untuk dashboard Service, bukan untuk perangkat scanner.
+                      </span>
+                    </div>
+                  )}
                 </FormItem>
               )} />
 
@@ -474,7 +495,7 @@ export default function ApkPage() {
           <SheetHeader className="mb-6">
             <SheetTitle>Edit APK Account</SheetTitle>
             <SheetDescription>
-              {editTarget?.name} ({editTarget?.source_table})
+              {editTarget?.name} ({sourceTableLabel(editTarget?.source_table)})
             </SheetDescription>
           </SheetHeader>
 
@@ -499,10 +520,24 @@ export default function ApkPage() {
               {/* Read-only table info */}
               <div className="rounded-md border px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
                 <Badge variant={editTarget?.source_table === "main" ? "default" : "secondary"} className="text-[10px]">
-                  {editTarget?.source_table === "main" ? "Main" : "Staging"}
+                  {sourceTableLabel(editTarget?.source_table)}
                 </Badge>
                 Tabel tidak dapat diubah setelah dibuat.
               </div>
+
+              {editTarget?.source_table === "staging" && (
+                <div
+                  role="alert"
+                  id="alert-apk-service-module-warning-edit"
+                  className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300"
+                >
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Akun Service Module <strong>tidak dapat login</strong> ke aplikasi scanner.
+                    Gunakan tipe ini hanya untuk dashboard Service, bukan untuk perangkat scanner.
+                  </span>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isUpdating} className="flex-1" id="btn-apk-edit-submit">
@@ -525,7 +560,7 @@ export default function ApkPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Reset password untuk <span className="font-semibold text-foreground">{resetPwTarget?.name}</span>{" "}
-              <Badge variant="secondary" className="text-[10px]">{resetPwTarget?.source_table}</Badge>
+              <Badge variant="secondary" className="text-[10px]">{sourceTableLabel(resetPwTarget?.source_table)}</Badge>
               <br />Password baru akan memaksa login ulang di perangkat.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -597,7 +632,7 @@ export default function ApkPage() {
             <AlertDialogDescription>
               Anda akan menghapus akun{" "}
               <span className="font-semibold text-foreground">{deleteTarget?.name}</span>{" "}
-              <Badge variant="secondary" className="text-[10px]">{deleteTarget?.source_table}</Badge>.
+              <Badge variant="secondary" className="text-[10px]">{sourceTableLabel(deleteTarget?.source_table)}</Badge>.
               Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -79,8 +79,10 @@ class MovingController extends Controller
     /**
      * DELETE /api/moving/{id}
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->authorize('delete', Moving::class);
+
         $moving = Moving::findOrFail($id);
         $moving->delete();
 

@@ -19,6 +19,14 @@ class MovingControllerTest extends TestCase
         return $user;
     }
 
+    protected function actingAdmin(): User
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin, 'sanctum');
+
+        return $admin;
+    }
+
     public function test_index_returns_paginated_moving_records(): void
     {
         $this->actingUser();
@@ -101,7 +109,7 @@ class MovingControllerTest extends TestCase
 
     public function test_destroy_deletes_moving_record(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $moving = Moving::factory()->create();
 
@@ -114,11 +122,24 @@ class MovingControllerTest extends TestCase
 
     public function test_destroy_returns_404_for_missing_record(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $response = $this->deleteJson('/api/moving/999999');
 
         $response->assertStatus(404);
+    }
+
+    public function test_destroy_returns_403_for_non_admin(): void
+    {
+        $this->actingUser();
+
+        $moving = Moving::factory()->create();
+
+        $response = $this->deleteJson("/api/moving/{$moving->id}");
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_moving', ['id' => $moving->id]);
     }
 
     public function test_index_requires_authentication(): void

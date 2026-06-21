@@ -15,56 +15,46 @@ use Tests\TestCase;
  * isolation from routing/middleware concerns, which are already covered by
  * the Feature-level tests in ShipmentControllerTest.
  *
- * BACKLOG NOTE (discovered during Phase 1 test authoring, do not fix in this
- * phase — out of blast radius per the plan's Blockers section):
- * `el_inbound_header.hawb` has a global UNIQUE KEY constraint covering every
- * row in the table (shipment rows where from_shipment=1 AND inbound-only
- * rows where from_shipment=0 alike — confirmed via tables_schema.sql line
- * ~182). This has two consequences for pushInbound():
- *
- *   1. The intended "happy path" (copy a shipment into a new Inbound row
- *      with the same hawb) ALWAYS fails with a 500 PDOException (Integrity
- *      constraint violation 1062) because the source shipment row already
- *      occupies that hawb value and is never deleted/renamed first.
- *   2. The 409-conflict branch (`Inbound::inboundOnly()->where('hawb', ...)`)
- *      checks for a precondition — a shipment row and an inbound-only row
- *      simultaneously sharing the same hawb — that can NEVER occur in real
- *      data, because the same unique constraint that breaks case 1 also
- *      prevents this precondition from ever being constructed. The 409
- *      branch is therefore unreachable dead code against the real schema.
- *
- * Both findings are recorded in the phase report as Phase 2+ backlog
- * candidates. This test file documents the real, currently-broken behavior
- * (case 1) rather than asserting the originally-intended 201 happy path.
- * The unreachable 409 branch (case 2) is not force-tested via schema
- * mutation (e.g. temporarily dropping the unique index) because ALTER TABLE
- * statements implicitly commit in MySQL/InnoDB, which breaks Laravel's
- * RefreshDatabase transaction wrapping for subsequent tests in the suite —
- * confirmed empirically during this phase's test authoring (the DDL mutation
- * corrupted the schema for the next test in the run). Forcing an
- * unreachable, schema-violating precondition is not worth that risk; the
- * 409 branch's existence and unreachability is documented here and in the
- * phase report instead.
+ * go-live Phase 2 (B3a) fix: pushInbound() now transitions the existing
+ * shipment row in-place (from_shipment 1 -> 0) instead of creating a new
+ * `el_inbound_header` row with the same `hawb`. This removes the unique-
+ * constraint violation that previously made the endpoint always fail with a
+ * 500, and removes the now-unreachable 409 duplicate-hawb branch since only
+ * one row per hawb ever exists. See
+ * process/features/go-live/backlog/shipment-push-inbound-bug_NOTE_20-06-26.md
+ * (resolved).
  */
 class ShipmentControllerPushInboundTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_push_inbound_fails_with_500_due_to_duplicate_hawb_constraint(): void
+    public function test_push_inbound_updates_shipment_row_in_place(): void
     {
         $user = User::factory()->create();
 
-        $shipment = Inbound::factory()->fromShipment()->create(['hawb' => 'HAWB-UNITNOCONFLICT']);
+        $shipment = Inbound::factory()->fromShipment()->create([
+            'hawb' => 'HAWB-UNITNOCONFLICT',
+            'status' => 'created',
+        ]);
 
         $request = Request::create('/api/shipments/'.$shipment->id.'/push-inbound', 'POST');
         $request->setUserResolver(fn () => $user);
 
         $controller = new ShipmentController();
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
-        $this->expectExceptionMessageMatches('/1062/');
+        $response = $controller->pushInbound($request, $shipment->id);
 
-        $controller->pushInbound($request, $shipment->id);
+        $this->assertSame(201, $response->getStatusCode());
+
+        $payload = $response->getData(true);
+        $this->assertSame($shipment->id, $payload['inbound_id']);
+
+        $shipment->refresh();
+        $this->assertFalse((bool) $shipment->from_shipment);
+        $this->assertSame('inprogress', $shipment->status);
+
+        // No duplicate row was created — only one el_inbound_header row for this hawb.
+        $this->assertSame(1, Inbound::where('hawb', 'HAWB-UNITNOCONFLICT')->count());
     }
 
     public function test_push_inbound_returns_404_for_inbound_only_record_not_a_shipment(): void

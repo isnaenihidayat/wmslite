@@ -19,13 +19,14 @@ use Tests\TestCase;
  * compute items_total/items_picked. Recorded as a Phase 2+ backlog
  * candidate.
  *
- * SECOND BACKLOG NOTE (also discovered during this phase, same do-not-fix
- * scope): InboundController::details() (`GET /api/inbound/{id}/details`)
- * calls `->orderBy('id')` on the `el_inbound_details` table, but that table
- * has no `id` column at all (confirmed via tables_schema.sql — no primary
- * key, only a non-unique KEY on `hawb`). The endpoint always returns 500.
- * See test_details_endpoint_currently_fails_with_500_due_to_missing_id_column
- * below.
+ * go-live Phase 2 (B3b) fix: InboundController::details()
+ * (`GET /api/inbound/{id}/details`) previously called `->orderBy('id')` on
+ * the `el_inbound_details` table, but that table has no `id` column at all
+ * (confirmed via tables_schema.sql — no primary key, only a non-unique KEY
+ * on `hawb`), so the endpoint always returned 500. Fixed to order by
+ * `date_created`. See
+ * test_details_endpoint_returns_200_ordered_by_date_created below. Closes
+ * process/features/go-live/backlog/inbound-details-endpoint-bug_NOTE_20-06-26.md.
  */
 class InboundControllerTest extends TestCase
 {
@@ -132,28 +133,44 @@ class InboundControllerTest extends TestCase
     }
 
     /**
-     * BACKLOG NOTE (discovered during Phase 1 test authoring, do not fix in
-     * this phase — out of blast radius): `el_inbound_details` has NO `id`
-     * column at all (confirmed via tables_schema.sql — the table has no
-     * primary key, only a non-unique KEY on `hawb`). However,
-     * `InboundController::details()` calls
-     * `$inbound->details()->orderBy('id')->get()`, which always fails with a
-     * 500 (PDOException: Unknown column 'id' in 'ORDER BY') because that
-     * column does not exist. This means GET /api/inbound/{id}/details is
-     * currently completely broken in production. This test documents the
-     * real, currently-broken behavior. Recorded as a Phase 2+ backlog
-     * candidate alongside the index() N+1 note above.
+     * go-live Phase 2 (B3b) fix: `el_inbound_details` has NO `id` column at
+     * all (confirmed via tables_schema.sql — the table has no primary key,
+     * only a non-unique KEY on `hawb`). `InboundController::details()`
+     * previously called `->orderBy('id')`, which always failed with a 500
+     * (PDOException: Unknown column 'id' in 'ORDER BY'). Fixed to order by
+     * `date_created` instead. Closes
+     * process/features/go-live/backlog/inbound-details-endpoint-bug_NOTE_20-06-26.md.
      */
-    public function test_details_endpoint_currently_fails_with_500_due_to_missing_id_column(): void
+    public function test_details_endpoint_returns_200_ordered_by_date_created(): void
     {
         $this->actingUser();
 
         $inbound = Inbound::factory()->create(['hawb' => 'HAWB-DETAILTEST']);
-        InboundDetail::factory()->count(3)->create(['hawb' => 'HAWB-DETAILTEST']);
+
+        // date_created is not mass-assignable on InboundDetail ($fillable
+        // excludes it, the model disables Eloquent's auto timestamps via
+        // CREATED_AT/UPDATED_AT = null, and el_inbound_details has no `id`
+        // column so a post-create ->save() would fail) — use forceCreate()
+        // to set it directly and control ordering deterministically.
+        InboundDetail::forceCreate(array_merge(
+            InboundDetail::factory()->make(['hawb' => 'HAWB-DETAILTEST', 'descr' => 'oldest'])->toArray(),
+            ['date_created' => now()->subMinutes(10)]
+        ));
+        InboundDetail::forceCreate(array_merge(
+            InboundDetail::factory()->make(['hawb' => 'HAWB-DETAILTEST', 'descr' => 'middle'])->toArray(),
+            ['date_created' => now()->subMinutes(5)]
+        ));
+        InboundDetail::forceCreate(array_merge(
+            InboundDetail::factory()->make(['hawb' => 'HAWB-DETAILTEST', 'descr' => 'newest'])->toArray(),
+            ['date_created' => now()]
+        ));
 
         $response = $this->getJson("/api/inbound/{$inbound->id}/details");
 
-        $response->assertStatus(500);
+        $response->assertOk();
+
+        $descrs = collect($response->json('data'))->pluck('descr')->all();
+        $this->assertSame(['oldest', 'middle', 'newest'], $descrs);
     }
 
     public function test_store_creates_inbound_record(): void

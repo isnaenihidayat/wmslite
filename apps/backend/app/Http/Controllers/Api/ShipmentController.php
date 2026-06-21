@@ -137,48 +137,24 @@ class ShipmentController extends Controller
     /**
      * POST /api/shipments/{id}/push-inbound
      *
-     * Salin Shipment → Inbound baru (from_shipment = 0).
-     * Jika HAWB sudah ada di inbound, return error 409.
+     * Transisikan Shipment menjadi Inbound secara in-place: row yang sama
+     * diubah dari from_shipment=1 menjadi from_shipment=0, tidak membuat row
+     * baru. Tidak ada lagi konflik HAWB karena hanya ada satu row per HAWB.
      */
     public function pushInbound(Request $request, int $id): JsonResponse
     {
         $shipment = Inbound::shipments()->with('details')->findOrFail($id);
 
-        // Cek apakah inbound dengan HAWB yang sama sudah ada
-        $existingInbound = Inbound::inboundOnly()
-            ->where('hawb', $shipment->hawb)
-            ->first();
-
-        if ($existingInbound) {
-            return response()->json([
-                'message' => "Inbound dengan HAWB '{$shipment->hawb}' sudah ada (ID: {$existingInbound->id}).",
-                'inbound_id' => $existingInbound->id,
-            ], 409);
-        }
-
-        // Salin semua field dari shipment ke inbound baru
-        $inbound = Inbound::create([
-            'hawb'                => $shipment->hawb,
-            'descr'               => $shipment->descr,
-            'product_category_id' => $shipment->product_category_id,
-            'modality'            => $shipment->modality,
-            'delivery_id'         => $shipment->delivery_id,
-            'qty'                 => $shipment->qty,
-            'po'                  => $shipment->po,
-            'locator'             => $shipment->locator,
-            'etd'                 => $shipment->etd,
-            'eta'                 => $shipment->eta,
-            'ata'                 => $shipment->ata,
-            'status'              => 'inprogress',
-            'from_shipment'       => 0,
-            'checker'             => $request->user()->full_name ?? 'system',
-            'created_by'          => $request->user()->user_id,
+        $shipment->update([
+            'from_shipment' => 0,
+            'status'        => 'inprogress',
+            'updated_by'    => $request->user()->user_id,
         ]);
 
         return response()->json([
             'message'    => "Shipment '{$shipment->hawb}' berhasil di-push ke Inbound.",
-            'inbound_id' => $inbound->id,
-            'data'       => $inbound->load('category'),
+            'inbound_id' => $shipment->id,
+            'data'       => $shipment->fresh()->load('category'),
         ], 201);
     }
 }

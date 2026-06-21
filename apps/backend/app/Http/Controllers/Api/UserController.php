@@ -17,10 +17,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Only admin can access
-        if (! $request->user()->admin) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        $this->authorize('viewAny', User::class);
 
         $query = User::query()->select([
             'user_id', 'first_name', 'last_name', 'email_address',
@@ -68,9 +65,7 @@ class UserController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        if (! $request->user()->admin) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        $this->authorize('create', User::class);
 
         $validated = $request->validate([
             'first_name'     => ['required', 'string', 'max:255'],
@@ -101,9 +96,7 @@ class UserController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        if (! $request->user()->admin) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        $this->authorize('update', User::class);
 
         $user = User::findOrFail($id);
 
@@ -131,9 +124,7 @@ class UserController extends Controller
      */
     public function resetPassword(Request $request, int $id): JsonResponse
     {
-        if (! $request->user()->admin) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        $this->authorize('resetPassword', User::class);
 
         $user = User::findOrFail($id);
 
@@ -154,9 +145,7 @@ class UserController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        if (! $request->user()->admin) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        $this->authorize('delete', User::class);
 
         // Protect: cannot delete yourself
         if ($request->user()->user_id === $id) {
