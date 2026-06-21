@@ -3,7 +3,7 @@ name: context:all-auth
 description: "Dual-stack auth: NextAuth.js (frontend) + Laravel Sanctum (backend) — the Auth group entrypoint/router"
 keywords: auth, authentication, login, logout, session, nextauth, sanctum, token, accessToken, role, permission, apk scanner
 related: [context:all-database]
-date: 18-06-26
+date: 21-06-26
 ---
 
 # Auth Context
@@ -25,7 +25,29 @@ This group covers:
 - Custom login page: `pages: { signIn: "/login", error: "/login" }`; route location `apps/frontend/src/app/(auth)/login/`.
 - Backend: `AuthController` (`apps/backend/app/Http/Controllers/Api/AuthController.php`) exposes `POST /api/auth/login`, `POST /api/auth/logout` (requires `auth:sanctum`), `GET /api/auth/me` (requires `auth:sanctum`).
 - All other API routes (shipments, inbound, outbound, reports, master, moving, monitoring, admin) are wrapped in `auth:sanctum` middleware in `routes/api.php`.
-- Role/permission checks are based on a combination of `type` (0-3) + `admin` (boolean flag) + `module` (1=OTR, 2=Service) from `el_user` — NOT a separate roles table or Laravel's built-in Gate/Policy. **Unconfirmed: whether a formal Policy class already exists — verify in code before assuming, this is a noted gap, not a fact.**
+- Role/permission checks are based on a combination of `type` (0-3) + `admin` (boolean flag) + `module` (1=OTR, 2=Service) from `el_user` — NOT a separate roles table.
+- **Policy/Gate implementation status — confirmed during go-live Phase 2 (21-06-26), MVP scope
+  only.** Three Laravel Policy classes exist, registered in
+  `apps/backend/app/Providers/AppServiceProvider.php::boot()` via `Gate::policy(...)` (this app has
+  no `AuthServiceProvider` — that is not the registration point in Laravel 13):
+  - `ApkUserPolicy` — gates `ApkController::resetPassword()` and `ApkController::logout()` (force
+    logout). Rule: `$user->admin || in_array($user->type, [1, 3])`, matching the frontend's
+    existing `canEdit` gate in `master/apk/page.tsx`. Uses class-string authorization
+    (`$this->authorize('resetPassword', \App\Models\ApkUser::class)`) since `ApkController` only
+    ever runs raw `DB::table()` queries, never fetching an `ApkUser` Eloquent instance.
+  - `UserPolicy` — formalizes the prior ad hoc `if (!$request->user()->admin)` check across all 5
+    `UserController` methods (`viewAny`/`create`/`update`/`resetPassword`/`delete`), all admin-only.
+    Behavior is unchanged from before, just formalized as a Policy.
+  - `MovingPolicy` — gates `MovingController::destroy` (destructive delete), admin-only.
+
+  **This is deliberately scoped to the 3 highest-risk clusters, not full coverage — this is a known
+  gap, not resolved work.** `InboundController`, `OutboundController`, `ShipmentController`, and all
+  master-data CRUD controllers (locations, categories, recipients) still have **zero authorization
+  checks** — any authenticated user can currently create/update/delete this data regardless of
+  `type`/`admin`/`module`. `type`/`module` fields are never checked anywhere outside the 3 Policies
+  above. Full Policy coverage for the remaining controllers is an explicit, documented Phase 3
+  backlog item (see `process/features/go-live/backlog/`), not something to assume is in progress or
+  planned without checking the backlog first.
 - The APK Scanner has its OWN account system, separate from `el_user` (tables `el_apk`/`el_apk_s`, model `ApkUser.php`, managed via `ApkController.php` with reset-password and force-logout). This is not the same NextAuth/Sanctum session used by the dashboard web app — it's intended for a separate mobile scanner app that has NOT been built yet (only account management exists so far).
 
 It does not cover:
@@ -50,6 +72,7 @@ Read this entrypoint when:
 - use `apps/backend/app/Http/Controllers/Api/AuthController.php` for the Sanctum login/logout/me endpoints
 - use `apps/backend/app/Http/Controllers/Api/ApkController.php` for the separate APK Scanner account management (reset password, force logout)
 - use `apps/backend/routes/api.php` for which routes require `auth:sanctum`
+- use `apps/backend/app/Policies/{ApkUserPolicy,UserPolicy,MovingPolicy}.php` for the 3 existing Policy classes, and `apps/backend/app/Providers/AppServiceProvider.php::boot()` for their registration
 
 ## Source Paths
 
@@ -63,13 +86,17 @@ Read this entrypoint when:
 - `apps/backend/app/Models/User.php`
 - `apps/backend/app/Models/ApkUser.php`
 - `apps/backend/routes/api.php`
+- `apps/backend/app/Policies/ApkUserPolicy.php`
+- `apps/backend/app/Policies/UserPolicy.php`
+- `apps/backend/app/Policies/MovingPolicy.php`
+- `apps/backend/app/Providers/AppServiceProvider.php`
 
 ## Update Triggers
 
 Update this group when:
 
 - the auth provider changes (e.g. OAuth is added)
-- the role/permission model is refactored into formal Policy/Gate classes
+- Policy coverage expands beyond the current 3 clusters (Inbound/Outbound/Shipment/master-data CRUD — Phase 3 backlog)
 - the APK Scanner app begins development and needs its own auth flow
 
 ## Canonical Notes

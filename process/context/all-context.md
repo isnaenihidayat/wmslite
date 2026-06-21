@@ -1,6 +1,6 @@
 # WMS Lite - All Context
 
-Last updated: 2026-06-18
+Last updated: 2026-06-21
 
 This file is the root context entrypoint for the repo.
 
@@ -287,23 +287,63 @@ wmslite/
 
 **Config files:** `apps/frontend/.env*` (Next.js env files, git-ignored), `apps/backend/.env` / `.env.example` (Laravel), `tsconfig.json` (frontend path aliases), `phpunit.xml` (backend test config).
 
-**Env var groups (names only, never values):**
+**Env var groups (names only, never values) — confirmed against `apps/frontend/src/lib/auth/auth.ts` and local `.env` during go-live Phase 2 RESEARCH (21-06-26):**
 - Frontend → Backend API: `NEXT_PUBLIC_LARAVEL_API_URL`
-- Frontend auth (NextAuth v5): `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (standard NextAuth v5 vars; confirm exact names in `apps/frontend/src/lib/auth/auth.ts` and local `.env` before relying on them)
+- Frontend auth (NextAuth v5): `NEXTAUTH_SECRET`, `NEXTAUTH_URL` — confirmed
 - Backend database: `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (defaults to sqlite in `.env.example`; production target is the shared MySQL instance)
 - Backend app/framework: standard Laravel `APP_*` vars (`APP_NAME`, `APP_ENV`, `APP_KEY`, `APP_DEBUG`, `APP_URL`)
 - Backend auth: Sanctum-related config in `config/sanctum.php` (stateful domains, token expiration) rather than dedicated env vars beyond the standard Laravel set
 
+## Confirmed Facts (resolved during go-live Phase 2, 21-06-26)
+
+These were previously logged as "Open Questions" during the initial harness STUDY pass and have
+since been resolved via RESEARCH + INNOVATE + EXECUTE in `process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md`:
+
+- **Shadow `_s` tables — bulk/qty vs per-lot/serial pattern, NOT staging-vs-confirmed.** Confirmed
+  from Yii `Driver.php` (`actionaddIn` / `actionaddIns`): main tables (`el_inbound_header`,
+  `el_outbound_header`, `el_moving`, `el_loc`) hold bulk/qty records; their `_s` counterparts plus
+  `el_inbound_lots` hold per-lot/serial-number detail records. See `database/all-database.md` for
+  the full pattern.
+- **`el_apk`/`el_apk_s` — a separate, unrelated exception, not an instance of the `_s` pattern
+  above.** `el_apk` = OTR module, accounts CAN log in to the scanner app
+  (`Driver::driverAppLogin()`). `el_apk_s` = Service module, accounts CANNOT log in to the scanner
+  app, has its own separate dashboard, and there is no sync between the two tables. This is
+  intentional design, not a bug or an incomplete migration.
+- **Shipment status flow — confirmed, and the prior assumption was wrong.** Actual flow:
+  `Air/Ocean Intransit -> Custom Process -> Warehouse in Transit -> successful`, sticky at
+  `successful` once reached, triggered when an optional field is filled, with `successful` set
+  automatically by `SyncCommand::sync()` (Schenker integration). The previously-documented
+  `new -> inprogress -> ...` flow was incorrect documentation, not a code bug — no code change was
+  needed for the flow itself.
+- **Role/permission enforcement — formalized for 3 controller clusters only; the rest remains a
+  known gap, not resolved.** As of go-live Phase 2, Laravel Policy classes exist for
+  `ApkUserPolicy` (gates `ApkController::resetPassword`/`logout`), `UserPolicy` (formalizes the
+  prior ad hoc admin check across all 5 `UserController` methods), and `MovingPolicy` (gates
+  `MovingController::destroy`, admin-only). Every other controller (Inbound, Outbound, Shipment,
+  and all master-data CRUD) still has **zero authorization checks** — any authenticated user can
+  currently mutate that data. `type`/`module` fields are never checked anywhere outside the 3
+  Policies above. Full Policy coverage for the remaining controllers is a documented Phase 3
+  backlog item (see `auth/all-auth.md`), not something resolved by this phase.
+- **NextAuth env var names** — confirmed: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and
+  `NEXT_PUBLIC_LARAVEL_API_URL` are the real, verified env var names used by
+  `apps/frontend/src/lib/auth/auth.ts`.
+
+## Known Limitations
+
+- **`tables_schema.sql` is stale relative to the live Yii codebase.** Confirmed during go-live
+  Phase 2 RESEARCH: the live Yii code references at least one column (`warehouse`) and a set of
+  Schenker integration tables that are not present in `tables_schema.sql`. Do not treat
+  `tables_schema.sql`/`adminer.sql` as a complete or current schema reference — verify any
+  assumption about a specific table or column against the live Yii code (`protected/`) or a live
+  database inspection instead of the schema dump alone. No full reconstruction of the schema dump
+  has been attempted; this is logged as an accepted limitation, not a task to complete.
+
 ## Open Questions / Outstanding Work
 
-These were flagged during initial STUDY but not yet confirmed with the user — verify before relying on them:
-
-- **Shadow `_s` tables**: many legacy tables have a `_s` counterpart with near-identical structure (`el_apk`/`el_apk_s`, `el_inbound_header`/`el_inbound_header_s`, etc.). Likely a staging/scan-in-progress vs confirmed-record pattern, but not confirmed with the user. See `database/all-database.md`.
-- **Exact shipment status flow**: `new -> inprogress -> Custom Process -> Warehouse in Transit -> successful` was inferred from earlier research, not directly confirmed against `ShipmentController.php` logic.
-- **Role/permission enforcement**: whether `type`/`admin`/`module` checks go through formal Laravel Policy/Gate classes or are checked ad hoc per-controller has not been verified.
-- **NextAuth env var names**: `NEXTAUTH_SECRET`/`NEXTAUTH_URL` are the standard NextAuth v5 convention but were not directly confirmed against `apps/frontend/.env*`.
-- **Testing phase**: user has stated intent to start testing (frontend + backend) before adding further modules — no concrete plan or scope decided yet.
-- **Future modules**: scope beyond the current 9 modules is intentionally undecided ("akan ditentukan nanti").
+- **Testing phase**: user has stated intent to start testing (frontend + backend) before adding
+  further modules — no concrete plan or scope decided yet.
+- **Future modules**: scope beyond the current 9 modules is intentionally undecided ("akan
+  ditentukan nanti").
 
 ## Scan Metadata
 

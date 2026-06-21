@@ -13,6 +13,15 @@ metadata:
 **Found during:** go-live Phase 1 (Test Infrastructure Foundation), Step B6 test writing
 **Source:** `process/features/go-live/active/go-live_19-06-26/phase-01-test-infrastructure_REPORT_19-06-26.md`
 
+**Resolved:** 2026-06-21, go-live Phase 2 Step B3b
+(`process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md`).
+Changed `orderBy('id')` to `orderBy('date_created')` in
+`InboundController::details()`. No frontend consumer
+(`inbound-detail-sheet.tsx`) imposes its own sort order or otherwise depends
+on scan order, so `date_created` (insert order) was used per the plan's
+default decision rather than `scan_time`. Regression coverage:
+`apps/backend/tests/Feature/InboundControllerTest.php::test_details_endpoint_returns_200_ordered_by_date_created`.
+
 ---
 
 ## Problem

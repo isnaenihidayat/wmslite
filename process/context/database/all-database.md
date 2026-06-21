@@ -3,7 +3,7 @@ name: context:all-database
 description: "MySQL legacy schema shared by Yii and Laravel during transition — the Database group entrypoint/router"
 keywords: database, schema, mysql, el_, eloquent, migration, model, hawb, shipment, inbound, outbound, moving, timestamp, primary key, shadow table
 related: [context:all-auth]
-date: 18-06-26
+date: 21-06-26
 ---
 
 # Database Context
@@ -20,15 +20,34 @@ This group covers:
 
 - The MySQL legacy schema shared by the old Yii app and the new Laravel backend during the transition period (source: `tables_schema.sql` and `adminer.sql` at repo root).
 - Legacy table naming convention: all tables prefixed `el_` (e.g. `el_user`, `el_inbound_header`, `el_outbound_header`, `el_moving`, `el_loc`, `el_recipient`, `el_product_category`, `el_apk`, `el_option`, `el_log`, `el_demo_movement` + `el_demo_movement_detail`).
-- The shadow-table `_s` pattern: many tables have a near-identical sibling with an `_s` suffix (`el_apk`/`el_apk_s`, `el_loc`/`el_loc_s`, `el_inbound_header`/`el_inbound_header_s`, `el_inbound_details`/`el_inbound_details_s`, `el_outbound_header`/`el_outbound_header_s`, `el_outbound_details`/`el_outbound_details_s`, `el_moving`/`el_moving_s`) — likely a staging/scan-in-progress vs. final/confirmed-record split, related to `flag`/`scan_time` columns on detail tables. **This meaning is UNCONFIRMED — verify directly with the user before writing any migration or model that touches these tables.**
+- The shadow-table `_s` pattern — **confirmed during go-live Phase 2 (21-06-26)**, from Yii
+  `Driver.php` (`actionaddIn` / `actionaddIns`): main tables (`el_inbound_header`,
+  `el_outbound_header`, `el_moving`, `el_loc`) hold **bulk/qty** records; their `_s` counterparts
+  (`el_inbound_header_s`, `el_outbound_header_s`, `el_moving_s`, `el_loc_s`, `el_inbound_details_s`,
+  `el_outbound_details_s`) plus `el_inbound_lots` hold **per-lot/serial-number** detail records.
+  This is NOT a staging-vs-confirmed-record pattern — both the main table and its `_s` counterpart
+  hold live, final data; they represent different levels of granularity (aggregate quantity vs.
+  individual lot/serial), related to `flag`/`scan_time` columns on detail tables.
+- `el_apk`/`el_apk_s` is a **separate, unrelated exception** to the bulk/lot pattern above — do not
+  assume it follows the same semantics. `el_apk` = OTR module, accounts CAN log in to the scanner
+  app (`Driver::driverAppLogin()`). `el_apk_s` = Service module, accounts CANNOT log in to the
+  scanner app, has its own separate dashboard, and there is no sync between the two tables. This is
+  intentional design (confirmed, not a bug or incomplete migration).
 - Inconsistent timestamp conventions: older tables use `date_created`/`date_updated` (`el_inbound_header`, `el_outbound_header`, `el_moving`, `el_inbound_details`, etc.), newer tables use `created_at`/`updated_at` (`el_recipient`, `el_product_category`, `el_demo_movement`, `el_demo_movement_detail`). Eloquent defaults to `created_at`/`updated_at` — models pointing at old-style tables MUST override `const CREATED_AT = 'date_created';` and `const UPDATED_AT = 'date_updated';` (or set `public $timestamps = false`), otherwise Eloquent inserts/updates fail looking for nonexistent columns.
 - `hawb` (House Air Waybill) as the natural key linking inbound/outbound/moving/lot tables — NOT an integer foreign key. Cross-module joins typically use `WHERE hawb = ?`, not `WHERE id = ?`.
 - `el_inbound_details` and `el_outbound_details` lack a clear single-column primary key (only a plain `KEY` on `hawb`) — model these with custom/natural-key handling or `incrementing = false` rather than assuming a standard auto-increment PK.
-- The `status` column on header tables (`el_inbound_header`, `el_outbound_header`, `el_demo_movement`) is a free-text VARCHAR, not a DB enum. Observed values: `'inprogress'` (default), `'Requested'`. Known status flow (from prior research, unconfirmed in code): `new -> inprogress -> Custom Process -> Warehouse in Transit -> successful` — verify against `ShipmentController`/`Inbound` model if exact transitions matter.
+- The `status` column on header tables (`el_inbound_header`, `el_outbound_header`, `el_demo_movement`) is a free-text VARCHAR, not a DB enum. Observed values: `'inprogress'` (default), `'Requested'`. **Confirmed status flow (go-live Phase 2, 21-06-26):** `Air/Ocean Intransit -> Custom Process -> Warehouse in Transit -> successful`, sticky at `successful` once reached, triggered by an optional field being filled, with `successful` set automatically by `SyncCommand::sync()` (Schenker integration). No enum/status constant was added to `app/Models/Inbound.php` for this flow — it remains an unenforced, free-text convention by deliberate decision (see `process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md` Step B2).
 - `el_user` role/permission columns: `type` (INT 0-3), `admin` (INT 0/1 flag), `module` (INT; 1=OTR, 2=Service per prior research) — the basis for role-based access control system-wide.
 - "Shipment" has no dedicated table — `ShipmentController.php` operates on `App\Models\Inbound` (table `el_inbound_header`), distinguished via the `from_shipment` flag and/or `status`. A `pushInbound` action promotes a shipment record into an official inbound record (see git history "Push Shipment→Inbound").
 - The `vw_inbound` SQL VIEW, joining `el_inbound_header` + `el_inbound_details`.
 - Migration strategy: Laravel does NOT create a fresh schema — it shares the same MySQL database as the legacy Yii app during the transition (explicit user decision).
+- **Known limitation — `tables_schema.sql` is stale relative to the live Yii codebase.** Confirmed
+  during go-live Phase 2 RESEARCH (21-06-26): the live Yii code references at least a `warehouse`
+  column and a set of Schenker integration tables that are not present in `tables_schema.sql` or
+  `adminer.sql`. Treat both files as a useful but incomplete reference, not the source of truth —
+  verify any assumption about a specific table/column against the live Yii code (`protected/`) or
+  a live database inspection. No full schema-dump reconstruction has been attempted or is planned
+  as part of this; this is an accepted limitation, not an open task.
 
 It does not cover:
 
@@ -63,8 +82,8 @@ Read this entrypoint when:
 Update this group when:
 
 - a new table is added to the schema
-- the meaning of the `_s` shadow tables is confirmed by the user
 - the shared-database strategy changes (e.g. Laravel eventually moves to its own schema)
+- `tables_schema.sql`/`adminer.sql` staleness is resolved (a full schema-dump refresh is attempted)
 
 ## Canonical Notes
 

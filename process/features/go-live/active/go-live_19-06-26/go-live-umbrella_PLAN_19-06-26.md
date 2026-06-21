@@ -218,7 +218,7 @@ During /goal execution of a phase program:
 |---|---|
 | 0 — Pre-program (plan creation) | ✅ COMPLETE |
 | 01 — Test Infrastructure Foundation | ✅ VERIFIED |
-| 02 — Data Model & Auth Hardening | ⏳ PLANNED |
+| 02 — Data Model & Auth Hardening | ✅ VERIFIED |
 | 03 — Security & Validation Audit | ⏳ PLANNED |
 | 04 — Deployment Readiness | ⏳ PLANNED |
 | 05 — Legacy Yii Cutover Plan | ⏳ PLANNED |
@@ -297,20 +297,23 @@ node .claude/skills/vc-audit-context/scripts/validate-context-discovery.mjs
 
 ## Current Execution State
 
-Last updated: 20-06-26
-Completed phases: Phase 0 (Planning), Phase 1 (Test Infrastructure Foundation)
-Current phase: Phase 2 — Data Model & Auth Hardening
+Last updated: 21-06-26
+Completed phases: Phase 0, Phase 1, Phase 2
+Current phase: Phase 3 — Security & Validation Audit
 Current loop step: RESEARCH
-Validate-contract status: Phase 1 written and accepted; Phase 2 pending
+Validate-contract status: Phase 1+2 written and accepted; Phase 3 pending
 Program Net Gate: PENDING
-Latest validator run: 20-06-26 — backend `composer test` 162 tests/414 assertions 0 failures; frontend `npm run test` 14 files/18 tests 0 failures; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures
+Latest validator run: 21-06-26 — backend `composer test` 165 tests/431 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run build` succeeds; `npm run lint` 7 pre-existing errors/13 pre-existing warnings unchanged; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures
 
-Phase 1 closeout notes for Phase 2 RESEARCH: 2 new product bugs found during Phase 1 testing
-(`ShipmentController::pushInbound()` always 500, `InboundController::details()` always 500) — see
-`process/features/go-live/backlog/shipment-push-inbound-bug_NOTE_20-06-26.md` and
-`process/features/go-live/backlog/inbound-details-endpoint-bug_NOTE_20-06-26.md`. The pushInbound
-bug overlaps directly with Phase 2's planned shipment-status-flow confirmation — triage it as part
-of Phase 2's first RESEARCH step, not as a separate hotfix.
+Phase 2 closeout notes for Phase 3 RESEARCH: Phase 2 confirmed only 3 controller clusters
+(`ApkController`, `UserController`, `MovingController`) have any authorization check at all —
+`InboundController`, `OutboundController`, `ShipmentController`, and all master-data CRUD
+controllers still have zero authorization checks. This is a pre-confirmed finding for Phase 3's
+OWASP-style audit, not something to rediscover — see
+`process/features/go-live/backlog/policy-formalization-remaining-controllers_NOTE_21-06-26.md` and
+`process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_REPORT_19-06-26.md`.
+Also see `process/features/go-live/backlog/tables-schema-staleness_NOTE_21-06-26.md` for an
+unrelated, non-blocking schema-dump staleness note that may resurface in Phase 4/5.
 
 Loop step values: RESEARCH | INNOVATE | PLAN-SUPPLEMENT | PVL | EXECUTE | EVL | UPDATE-PROCESS
 Orchestrator rule: read "Current loop step" and "validate-contract status" before spawning any subagent. Never spawn execute-agent when loop step is RESEARCH, INNOVATE, PLAN-SUPPLEMENT, or PVL.

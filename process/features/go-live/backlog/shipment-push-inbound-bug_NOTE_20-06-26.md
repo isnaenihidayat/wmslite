@@ -13,6 +13,23 @@ metadata:
 **Found during:** go-live Phase 1 (Test Infrastructure Foundation), Step B5/B7 test writing
 **Source:** `process/features/go-live/active/go-live_19-06-26/phase-01-test-infrastructure_REPORT_19-06-26.md`
 
+**Resolved:** 2026-06-21, go-live Phase 2 Step B3a
+(`process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md`).
+`pushInbound()` now updates the existing shipment row in-place
+(`from_shipment` 1 -> 0, `status` -> `inprogress`) instead of creating a new
+`el_inbound_header` row with the same `hawb`. This removes the unique-
+constraint violation entirely (no duplicate row is ever attempted) and
+removes the now-unreachable 409 duplicate-hawb branch. `inbound_id` in the
+response now refers to the same id as the originating shipment — a
+deliberate, approved breaking change to the response contract (see the
+plan's Public Contracts section). Frontend `shipment.service.ts` and the
+push-to-inbound confirmation copy in `shipment/page.tsx` were updated to
+match. Regression coverage:
+`apps/backend/tests/Unit/ShipmentControllerPushInboundTest.php` and
+`apps/backend/tests/Feature/ShipmentControllerTest.php`
+(`test_push_inbound_updates_shipment_in_place`,
+`test_push_inbound_is_idempotent_when_called_twice`).
+
 ---
 
 ## Problem
