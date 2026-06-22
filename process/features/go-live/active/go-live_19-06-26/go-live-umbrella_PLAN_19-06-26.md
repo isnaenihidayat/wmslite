@@ -219,7 +219,7 @@ During /goal execution of a phase program:
 | 0 — Pre-program (plan creation) | ✅ COMPLETE |
 | 01 — Test Infrastructure Foundation | ✅ VERIFIED |
 | 02 — Data Model & Auth Hardening | ✅ VERIFIED |
-| 03 — Security & Validation Audit | ⏳ PLANNED |
+| 03 — Security & Validation Audit | ✅ VERIFIED |
 | 04 — Deployment Readiness | ⏳ PLANNED |
 | 05 — Legacy Yii Cutover Plan | ⏳ PLANNED |
 
@@ -297,23 +297,38 @@ node .claude/skills/vc-audit-context/scripts/validate-context-discovery.mjs
 
 ## Current Execution State
 
-Last updated: 21-06-26
-Completed phases: Phase 0, Phase 1, Phase 2
-Current phase: Phase 3 — Security & Validation Audit
-Current loop step: RESEARCH
-Validate-contract status: Phase 1+2 written and accepted; Phase 3 pending
+Last updated: 22-06-26
+Completed phases: Phase 0, Phase 1, Phase 2, Phase 3
+Current phase: Phase 4 — Deployment Readiness
+Current loop step: RESEARCH (pending — not yet started)
+Validate-contract status: Phase 1+2+3 written and accepted (Phase 3 CONDITIONAL, accepted as-is); Phase 4 pending
 Program Net Gate: PENDING
-Latest validator run: 21-06-26 — backend `composer test` 165 tests/431 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run build` succeeds; `npm run lint` 7 pre-existing errors/13 pre-existing warnings unchanged; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures
+Latest validator run: 22-06-26 — backend `composer test` 181 tests/474 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run build` succeeds (17 routes); `npm run lint` 7 pre-existing errors/13 pre-existing warnings unchanged; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures
 
-Phase 2 closeout notes for Phase 3 RESEARCH: Phase 2 confirmed only 3 controller clusters
-(`ApkController`, `UserController`, `MovingController`) have any authorization check at all —
-`InboundController`, `OutboundController`, `ShipmentController`, and all master-data CRUD
-controllers still have zero authorization checks. This is a pre-confirmed finding for Phase 3's
-OWASP-style audit, not something to rediscover — see
-`process/features/go-live/backlog/policy-formalization-remaining-controllers_NOTE_21-06-26.md` and
-`process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_REPORT_19-06-26.md`.
-Also see `process/features/go-live/backlog/tables-schema-staleness_NOTE_21-06-26.md` for an
-unrelated, non-blocking schema-dump staleness note that may resurface in Phase 4/5.
+Phase 3 report: `process/features/go-live/active/go-live_19-06-26/phase-03-security-audit_REPORT_19-06-26.md`
+
+Phase 3 closeout notes for Phase 4 RESEARCH:
+- CRUD authorization for Inbound/Outbound/Shipment `update`/`destroy` is now gated (admin-only, via
+  `InboundPolicy`/`OutboundPolicy`/`ShipmentPolicy`). `store`/`index`/`show` on those 3 controllers
+  and all master-data CRUD remain ungated — see
+  `process/features/go-live/backlog/crud-store-read-authz_NOTE_22-06-26.md` (needs a product
+  decision, not a Phase 4 task, but worth knowing before deployment).
+- Token storage architecture changed: the Sanctum bearer token no longer touches browser
+  `sessionStorage`/`localStorage` at all (`token-sync.tsx` deleted). All frontend API calls now
+  thread the token via `useSession()` -> `createAuthenticatedClient(token)`. Any new frontend
+  feature work after this point must follow that pattern, not the old `apiClient` singleton.
+- Sanctum token expiration is now 480 minutes (8h), matching the frontend session `maxAge`. Login is
+  rate-limited (`email+ip`, 5/min). Phase 4 should confirm the rate limiter's cache backend is
+  consistent across however many app instances the deployment target runs — a single shared cache
+  store assumption is currently undocumented.
+- CSP header explicitly deferred (`process/features/go-live/backlog/csp-header_NOTE_22-06-26.md`) —
+  needs dedicated browser testing, not a quick add-on; do not assume it ships with Phase 4 unless
+  separately scoped.
+- Module-scoped read filtering (Section 7) deferred — no data table carries a per-record `module`
+  column (`process/features/go-live/backlog/module-scoped-data-filtering_NOTE_21-06-26.md`). This is
+  a data-model decision, unrelated to deployment readiness.
+- Also still open from Phase 2: `process/features/go-live/backlog/tables-schema-staleness_NOTE_21-06-26.md`
+  — schema-dump staleness note that may resurface in Phase 4/5.
 
 Loop step values: RESEARCH | INNOVATE | PLAN-SUPPLEMENT | PVL | EXECUTE | EVL | UPDATE-PROCESS
 Orchestrator rule: read "Current loop step" and "validate-contract status" before spawning any subagent. Never spawn execute-agent when loop step is RESEARCH, INNOVATE, PLAN-SUPPLEMENT, or PVL.

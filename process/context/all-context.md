@@ -315,15 +315,18 @@ since been resolved via RESEARCH + INNOVATE + EXECUTE in `process/features/go-li
   automatically by `SyncCommand::sync()` (Schenker integration). The previously-documented
   `new -> inprogress -> ...` flow was incorrect documentation, not a code bug — no code change was
   needed for the flow itself.
-- **Role/permission enforcement — formalized for 3 controller clusters only; the rest remains a
-  known gap, not resolved.** As of go-live Phase 2, Laravel Policy classes exist for
-  `ApkUserPolicy` (gates `ApkController::resetPassword`/`logout`), `UserPolicy` (formalizes the
-  prior ad hoc admin check across all 5 `UserController` methods), and `MovingPolicy` (gates
-  `MovingController::destroy`, admin-only). Every other controller (Inbound, Outbound, Shipment,
-  and all master-data CRUD) still has **zero authorization checks** — any authenticated user can
-  currently mutate that data. `type`/`module` fields are never checked anywhere outside the 3
-  Policies above. Full Policy coverage for the remaining controllers is a documented Phase 3
-  backlog item (see `auth/all-auth.md`), not something resolved by this phase.
+- **Role/permission enforcement — extended in go-live Phase 3; residual gap is narrower but still
+  real.** As of Phase 3 (22-06-26), Laravel Policy classes also gate `update`/`destroy` on
+  `InboundController`, `OutboundController`, `ShipmentController` (`InboundPolicy`/
+  `OutboundPolicy`/`ShipmentPolicy`, admin-only) and `store` on `MovingController`
+  (`MovingPolicy`), on top of Phase 2's `ApkUserPolicy`/`UserPolicy`/`MovingPolicy::destroy`
+  baseline. `ApkUserPolicy` also gained `store`/`update`/`delete`. **Remaining gap:**
+  `store`/`index`/`show` on Inbound/Outbound/Shipment, and ALL methods on every master-data CRUD
+  controller (locations, categories, recipients), still have zero authorization checks — any
+  authenticated user can currently create or read that data regardless of `type`/`admin`/`module`.
+  See `process/features/go-live/backlog/crud-store-read-authz_NOTE_22-06-26.md` — deferred pending
+  a product decision on who may create/read records per module, not something resolved or actively
+  planned without checking the backlog first. See `auth/all-auth.md` for the full Policy inventory.
 - **NextAuth env var names** — confirmed: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and
   `NEXT_PUBLIC_LARAVEL_API_URL` are the real, verified env var names used by
   `apps/frontend/src/lib/auth/auth.ts`.

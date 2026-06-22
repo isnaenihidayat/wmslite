@@ -63,14 +63,14 @@ WMS Lite is a monorepo with two independently-tested apps. There is no shared/un
 - the change is in `apps/backend` (Laravel 13)
 - the behavior is a Controller, Model, route, middleware, or any server-side logic
 - run via `composer test` (preferred — see Commands below for what it does), or `php artisan test` directly if the `wmslite_test` schema is already loaded and fresh
-- two suites are registered: `Unit` (`tests/Unit/`) and `Feature` (`tests/Feature/`), with ~162 tests passing as of Phase 1 (go-live program)
+- two suites are registered: `Unit` (`tests/Unit/`) and `Feature` (`tests/Feature/`), with 181 tests / 474 assertions passing as of Phase 3 (go-live program) — includes new `SecurityHeadersTest` and `CorsConfigurationTest` Feature files
 
 ### Use Vitest (frontend) when
 
 - the change is in `apps/frontend` (Next.js 16)
 - the behavior is a page component, hook, service call, or the NextAuth `authorize()` callback
 - run via `npm run test` (single run) or `npm run test:watch` (watch mode during development)
-- smoke tests exist for every dashboard page plus the login page and the NextAuth callback, 18 tests passing as of Phase 1 (go-live program)
+- smoke tests exist for every dashboard page plus the login page and the NextAuth callback, 14 files / 19 tests passing as of Phase 3 (go-live program) — 4 page tests (`recipient`, `locations`, `product-category`, `monitoring`) gained a `next-auth/react` session mock during Phase 3's token-storage removal
 - frontend tests mock `*.service.ts` API calls — they never hit the real backend; do not add tests that perform real network calls
 
 ### Legacy Yii (repo root) is out of scope
