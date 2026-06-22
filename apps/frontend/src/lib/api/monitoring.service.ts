@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -26,9 +26,11 @@ export interface MonitoringListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchMonitoringList(
-  params: MonitoringListParams
+  params: MonitoringListParams,
+  token: string
 ): Promise<{ data: ActivityLog[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<ActivityLog>>("/monitoring", { params });
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<ActivityLog>>("/monitoring", { params });
   return {
     data:     response.data.data,
     total:    response.data.meta.total,

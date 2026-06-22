@@ -243,8 +243,9 @@ function getUserColumns(opts: {
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
-  const isAdmin       = session?.user?.admin === 1;
-  const currentUserId = session?.user?.user_id as number | undefined;
+  const token          = session?.user?.accessToken;
+  const isAdmin        = session?.user?.admin === 1;
+  const currentUserId  = session?.user?.user_id as number | undefined;
 
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [search, setSearch]         = useState("");
@@ -270,11 +271,11 @@ export default function AdminUsersPage() {
     [pagination, debouncedSearch, statusFilter]
   );
 
-  const { data, isLoading, refetch }                    = useUserList(queryParams);
-  const { mutate: doCreate, isPending: isCreating }     = useCreateUser();
-  const { mutate: doUpdate, isPending: isUpdating }     = useUpdateUser();
-  const { mutate: doDelete, isPending: isDeleting }     = useDeleteUser();
-  const { mutate: doResetPw, isPending: isResettingPw } = useResetPassword();
+  const { data, isLoading, refetch }                    = useUserList(queryParams, token);
+  const { mutate: doCreate, isPending: isCreating }     = useCreateUser(token);
+  const { mutate: doUpdate, isPending: isUpdating }     = useUpdateUser(token);
+  const { mutate: doDelete, isPending: isDeleting }     = useDeleteUser(token);
+  const { mutate: doResetPw, isPending: isResettingPw } = useResetPassword(token);
 
   const handleEdit    = useCallback((u: AppUser) => { setEditUser(u); setFormOpen(true); }, []);
   const handleDelete  = useCallback((u: AppUser) => setDeleteTarget(u), []);

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -117,10 +118,13 @@ export function ShipmentFormSheet({
   isSubmitting,
 }: ShipmentFormSheetProps) {
   const isEdit = !!shipment;
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
 
   const { data: categories = [] } = useQuery({
     queryKey: ["master", "categories"],
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(token as string),
+    enabled: !!token,
     staleTime: 5 * 60_000,
   });
 

@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,9 +35,11 @@ interface PaginatedApk {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchApkList(
-  params: ApkListParams
+  params: ApkListParams,
+  token: string
 ): Promise<{ data: ApkAccount[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedApk>("/master/apk", { params });
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedApk>("/master/apk", { params });
   return {
     data:     response.data.data,
     total:    response.data.meta.total,
@@ -45,25 +47,30 @@ export async function fetchApkList(
   };
 }
 
-export async function createApkAccount(form: ApkFormData): Promise<ApkAccount> {
-  const response = await apiClient.post<{ data: ApkAccount }>("/master/apk", form);
+export async function createApkAccount(form: ApkFormData, token: string): Promise<ApkAccount> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: ApkAccount }>("/master/apk", form);
   return response.data.data;
 }
 
 export async function updateApkAccount(
   id: number,
-  form: { name?: string; username?: string; table?: "main" | "staging" }
+  form: { name?: string; username?: string; table?: "main" | "staging" },
+  token: string
 ): Promise<ApkAccount> {
-  const response = await apiClient.put<{ data: ApkAccount }>(`/master/apk/${id}`, form);
+  const client = createAuthenticatedClient(token);
+  const response = await client.put<{ data: ApkAccount }>(`/master/apk/${id}`, form);
   return response.data.data;
 }
 
 export async function resetApkPassword(
   id: number,
   password: string,
-  table: "main" | "staging"
+  table: "main" | "staging",
+  token: string
 ): Promise<{ message: string }> {
-  const response = await apiClient.post<{ message: string }>(
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ message: string }>(
     `/master/apk/${id}/reset-password`,
     { password, table }
   );
@@ -72,9 +79,11 @@ export async function resetApkPassword(
 
 export async function logoutApkAccount(
   id: number,
-  table: "main" | "staging"
+  table: "main" | "staging",
+  token: string
 ): Promise<{ message: string }> {
-  const response = await apiClient.post<{ message: string }>(
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ message: string }>(
     `/master/apk/${id}/logout`,
     { table }
   );
@@ -83,7 +92,9 @@ export async function logoutApkAccount(
 
 export async function deleteApkAccount(
   id: number,
-  table: "main" | "staging"
+  table: "main" | "staging",
+  token: string
 ): Promise<void> {
-  await apiClient.delete(`/master/apk/${id}`, { data: { table } });
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/master/apk/${id}`, { data: { table } });
 }

@@ -94,6 +94,8 @@ class OutboundController extends Controller
     {
         $outbound = Outbound::findOrFail($id);
 
+        $this->authorize('update', $outbound);
+
         // Cannot edit successfully completed outbound
         if ($outbound->status === 'successful') {
             return response()->json([
@@ -123,6 +125,8 @@ class OutboundController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $outbound = Outbound::findOrFail($id);
+
+        $this->authorize('delete', $outbound);
 
         if ($outbound->status === 'successful') {
             return response()->json([

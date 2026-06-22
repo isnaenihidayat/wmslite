@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import {
   Sheet,
   SheetContent,
@@ -154,8 +155,11 @@ export function OutboundDetailSheet({
   onOpenChange,
   outbound,
 }: OutboundDetailSheetProps) {
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
   const { data: fullOutbound, isLoading: detailsLoading } = useOutboundDetails(
-    open ? (outbound?.id ?? null) : null
+    open ? (outbound?.id ?? null) : null,
+    token
   );
 
   // Use fetched full data when available, fall back to list-row data

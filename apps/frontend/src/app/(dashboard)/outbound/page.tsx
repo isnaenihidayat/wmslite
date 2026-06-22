@@ -47,6 +47,7 @@ const STATUS_OPTIONS = [
 
 export default function OutboundPage() {
   const { data: session } = useSession();
+  const token = session?.user?.accessToken;
   const isAdmin = session?.user?.admin === 1;
   const userType = session?.user?.type ?? 0;
   const canEdit = isAdmin;
@@ -76,10 +77,10 @@ export default function OutboundPage() {
     [pagination, debouncedSearch, statusFilter]
   );
 
-  const { data, isLoading, refetch } = useOutboundList(queryParams);
-  const { mutate: doCreate, isPending: isCreating } = useCreateOutbound();
-  const { mutate: doUpdate, isPending: isUpdating } = useUpdateOutbound();
-  const { mutate: doDelete, isPending: isDeleting } = useDeleteOutbound();
+  const { data, isLoading, refetch } = useOutboundList(queryParams, token);
+  const { mutate: doCreate, isPending: isCreating } = useCreateOutbound(token);
+  const { mutate: doUpdate, isPending: isUpdating } = useUpdateOutbound(token);
+  const { mutate: doDelete, isPending: isDeleting } = useDeleteOutbound(token);
 
   const handleEdit = useCallback((row: OutboundHeader) => {
     setEditOutbound(row);

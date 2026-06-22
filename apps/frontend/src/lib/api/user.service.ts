@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -42,9 +42,11 @@ export interface UserListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchUserList(
-  params: UserListParams
+  params: UserListParams,
+  token: string
 ): Promise<{ data: AppUser[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<AppUser>>("/admin/users", { params });
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<AppUser>>("/admin/users", { params });
   return {
     data:     response.data.data,
     total:    response.data.meta.total,
@@ -52,21 +54,25 @@ export async function fetchUserList(
   };
 }
 
-export async function createUser(form: UserFormData & { password: string }): Promise<AppUser> {
-  const response = await apiClient.post<{ data: AppUser }>("/admin/users", form);
+export async function createUser(form: UserFormData & { password: string }, token: string): Promise<AppUser> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: AppUser }>("/admin/users", form);
   return response.data.data;
 }
 
-export async function updateUser(id: number, form: Partial<UserFormData>): Promise<AppUser> {
-  const response = await apiClient.put<{ data: AppUser }>(`/admin/users/${id}`, form);
+export async function updateUser(id: number, form: Partial<UserFormData>, token: string): Promise<AppUser> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.put<{ data: AppUser }>(`/admin/users/${id}`, form);
   return response.data.data;
 }
 
-export async function resetUserPassword(id: number, password: string): Promise<{ message: string }> {
-  const response = await apiClient.post<{ message: string }>(`/admin/users/${id}/reset-password`, { password });
+export async function resetUserPassword(id: number, password: string, token: string): Promise<{ message: string }> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ message: string }>(`/admin/users/${id}/reset-password`, { password });
   return response.data;
 }
 
-export async function deleteUser(id: number): Promise<void> {
-  await apiClient.delete(`/admin/users/${id}`);
+export async function deleteUser(id: number, token: string): Promise<void> {
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/admin/users/${id}`);
 }

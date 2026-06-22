@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -54,9 +54,11 @@ export interface OutboundListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchOutboundList(
-  params: OutboundListParams
+  params: OutboundListParams,
+  token: string
 ): Promise<{ data: Outbound[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<Outbound>>(
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<Outbound>>(
     "/outbound",
     { params }
   );
@@ -67,30 +69,36 @@ export async function fetchOutboundList(
   };
 }
 
-export async function fetchOutbound(id: number): Promise<Outbound> {
-  const response = await apiClient.get<{ data: Outbound }>(`/outbound/${id}`);
+export async function fetchOutbound(id: number, token: string): Promise<Outbound> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<{ data: Outbound }>(`/outbound/${id}`);
   return response.data.data;
 }
 
 /** Fetch single outbound with eager-loaded details[] */
-export async function fetchOutboundWithDetails(id: number): Promise<Outbound> {
-  const response = await apiClient.get<{ data: Outbound }>(`/outbound/${id}`);
+export async function fetchOutboundWithDetails(id: number, token: string): Promise<Outbound> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<{ data: Outbound }>(`/outbound/${id}`);
   return response.data.data;
 }
 
-export async function createOutbound(form: OutboundFormData): Promise<Outbound> {
-  const response = await apiClient.post<{ data: Outbound }>("/outbound", form);
+export async function createOutbound(form: OutboundFormData, token: string): Promise<Outbound> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: Outbound }>("/outbound", form);
   return response.data.data;
 }
 
 export async function updateOutbound(
   id: number,
-  form: Partial<OutboundFormData>
+  form: Partial<OutboundFormData>,
+  token: string
 ): Promise<Outbound> {
-  const response = await apiClient.put<{ data: Outbound }>(`/outbound/${id}`, form);
+  const client = createAuthenticatedClient(token);
+  const response = await client.put<{ data: Outbound }>(`/outbound/${id}`, form);
   return response.data.data;
 }
 
-export async function deleteOutbound(id: number): Promise<void> {
-  await apiClient.delete(`/outbound/${id}`);
+export async function deleteOutbound(id: number, token: string): Promise<void> {
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/outbound/${id}`);
 }

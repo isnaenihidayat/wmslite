@@ -16,7 +16,7 @@ export const inboundKeys = {
   details: (id: number) => ["inbounds", "details", id] as const,
 };
 
-export function useInboundList(params: InboundListParams) {
+export function useInboundList(params: InboundListParams, token: string | undefined) {
   // Convert 0-indexed page to 1-indexed for Laravel
   const laravelParams = {
     ...params,
@@ -25,25 +25,26 @@ export function useInboundList(params: InboundListParams) {
   };
   return useQuery({
     queryKey: inboundKeys.list(params),
-    queryFn: () => fetchInboundList(laravelParams),
+    queryFn: () => fetchInboundList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useInboundDetails(id: number | null) {
+export function useInboundDetails(id: number | null, token: string | undefined) {
   return useQuery({
     queryKey: inboundKeys.details(id ?? 0),
-    queryFn:  () => fetchInboundDetails(id!),
-    enabled:  id !== null && id > 0,
+    queryFn:  () => fetchInboundDetails(id!, token as string),
+    enabled:  id !== null && id > 0 && !!token,
     staleTime: 60_000,
   });
 }
 
-export function useCreateInbound() {
+export function useCreateInbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: InboundFormData) => createInbound(form),
+    mutationFn: (form: InboundFormData) => createInbound(form, token as string),
     onSuccess: () => {
       toast.success("Inbound berhasil ditambahkan.");
       qc.invalidateQueries({ queryKey: inboundKeys.all });
@@ -55,11 +56,11 @@ export function useCreateInbound() {
   });
 }
 
-export function useUpdateInbound() {
+export function useUpdateInbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<InboundFormData> }) =>
-      updateInbound(id, form),
+      updateInbound(id, form, token as string),
     onSuccess: () => {
       toast.success("Inbound berhasil diperbarui.");
       qc.invalidateQueries({ queryKey: inboundKeys.all });
@@ -71,10 +72,10 @@ export function useUpdateInbound() {
   });
 }
 
-export function useDeleteInbound() {
+export function useDeleteInbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteInbound(id),
+    mutationFn: (id: number) => deleteInbound(id, token as string),
     onSuccess: () => {
       toast.success("Inbound berhasil dihapus.");
       qc.invalidateQueries({ queryKey: inboundKeys.all });

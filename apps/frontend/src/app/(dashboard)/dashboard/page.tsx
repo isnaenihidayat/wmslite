@@ -99,7 +99,7 @@ function RecentRow({ label, sublabel, status, date }: {
 export default function DashboardPage() {
   const { data: session } = useSession();
   const name = session?.user?.name?.split(" ")[0] || "User";
-  const { data: stats, isLoading, isError, refetch, dataUpdatedAt } = useDashboardStats();
+  const { data: stats, isLoading, isError, refetch, dataUpdatedAt } = useDashboardStats(session?.user?.accessToken);
 
   const lastUpdated = useMemo(() => {
     if (!dataUpdatedAt) return null;

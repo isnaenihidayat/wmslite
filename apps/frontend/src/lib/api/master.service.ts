@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,17 +22,20 @@ export interface Recipient {
 
 // ── Fetchers ─────────────────────────────────────────────────────────────────
 
-export async function fetchLocations(): Promise<Location[]> {
-  const res = await apiClient.get<{ data: Location[] }>("/master/locations");
+export async function fetchLocations(token: string): Promise<Location[]> {
+  const client = createAuthenticatedClient(token);
+  const res = await client.get<{ data: Location[] }>("/master/locations");
   return res.data.data;
 }
 
-export async function fetchCategories(): Promise<ProductCategory[]> {
-  const res = await apiClient.get<{ data: ProductCategory[] }>("/master/categories");
+export async function fetchCategories(token: string): Promise<ProductCategory[]> {
+  const client = createAuthenticatedClient(token);
+  const res = await client.get<{ data: ProductCategory[] }>("/master/categories");
   return res.data.data;
 }
 
-export async function fetchRecipients(): Promise<Recipient[]> {
-  const res = await apiClient.get<{ data: Recipient[] }>("/master/recipients");
+export async function fetchRecipients(token: string): Promise<Recipient[]> {
+  const client = createAuthenticatedClient(token);
+  const res = await client.get<{ data: Recipient[] }>("/master/recipients");
   return res.data.data;
 }

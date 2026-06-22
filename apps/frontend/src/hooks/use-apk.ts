@@ -16,7 +16,7 @@ export const apkKeys = {
   list: (params: ApkListParams) => ["apk", "list", params] as const,
 };
 
-export function useApkList(params: ApkListParams) {
+export function useApkList(params: ApkListParams, token: string | undefined) {
   const laravelParams = {
     ...params,
     page: (params.page ?? 0) + 1,
@@ -24,16 +24,17 @@ export function useApkList(params: ApkListParams) {
   };
   return useQuery({
     queryKey: apkKeys.list(params),
-    queryFn:  () => fetchApkList(laravelParams),
+    queryFn:  () => fetchApkList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useCreateApkAccount() {
+export function useCreateApkAccount(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: ApkFormData) => createApkAccount(form),
+    mutationFn: (form: ApkFormData) => createApkAccount(form, token as string),
     onSuccess: () => {
       toast.success("APK account berhasil dibuat.");
       qc.invalidateQueries({ queryKey: apkKeys.all });
@@ -48,11 +49,11 @@ export function useCreateApkAccount() {
   });
 }
 
-export function useUpdateApkAccount() {
+export function useUpdateApkAccount(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: { name?: string; username?: string; table?: "main" | "staging" } }) =>
-      updateApkAccount(id, form),
+      updateApkAccount(id, form, token as string),
     onSuccess: () => {
       toast.success("APK account berhasil diperbarui.");
       qc.invalidateQueries({ queryKey: apkKeys.all });
@@ -63,10 +64,10 @@ export function useUpdateApkAccount() {
   });
 }
 
-export function useResetApkPassword() {
+export function useResetApkPassword(token: string | undefined) {
   return useMutation({
     mutationFn: ({ id, password, table }: { id: number; password: string; table: "main" | "staging" }) =>
-      resetApkPassword(id, password, table),
+      resetApkPassword(id, password, table, token as string),
     onSuccess: (data) => {
       toast.success(data.message || "Password berhasil direset.");
     },
@@ -76,11 +77,11 @@ export function useResetApkPassword() {
   });
 }
 
-export function useLogoutApkAccount() {
+export function useLogoutApkAccount(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, table }: { id: number; table: "main" | "staging" }) =>
-      logoutApkAccount(id, table),
+      logoutApkAccount(id, table, token as string),
     onSuccess: (data) => {
       toast.success(data.message || "Session berhasil di-logout.");
       qc.invalidateQueries({ queryKey: apkKeys.all });
@@ -91,11 +92,11 @@ export function useLogoutApkAccount() {
   });
 }
 
-export function useDeleteApkAccount() {
+export function useDeleteApkAccount(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, table }: { id: number; table: "main" | "staging" }) =>
-      deleteApkAccount(id, table),
+      deleteApkAccount(id, table, token as string),
     onSuccess: () => {
       toast.success("APK account berhasil dihapus.");
       qc.invalidateQueries({ queryKey: apkKeys.all });

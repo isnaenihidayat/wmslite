@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,9 +33,11 @@ export interface MovingListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchMovingList(
-  params: MovingListParams
+  params: MovingListParams,
+  token: string
 ): Promise<{ data: Moving[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<Moving>>("/moving", { params });
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<Moving>>("/moving", { params });
   return {
     data:     response.data.data,
     total:    response.data.meta.total,
@@ -43,11 +45,13 @@ export async function fetchMovingList(
   };
 }
 
-export async function createMoving(form: MovingFormData): Promise<Moving> {
-  const response = await apiClient.post<{ data: Moving }>("/moving", form);
+export async function createMoving(form: MovingFormData, token: string): Promise<Moving> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: Moving }>("/moving", form);
   return response.data.data;
 }
 
-export async function deleteMoving(id: number): Promise<void> {
-  await apiClient.delete(`/moving/${id}`);
+export async function deleteMoving(id: number, token: string): Promise<void> {
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/moving/${id}`);
 }

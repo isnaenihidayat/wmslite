@@ -131,6 +131,21 @@ class ApkControllerTest extends TestCase
         $this->assertDatabaseHas('el_apk', ['username' => 'new_scanner']);
     }
 
+    public function test_store_returns_403_for_unauthorized_user(): void
+    {
+        $this->actingUnauthorizedUser();
+
+        $response = $this->postJson('/api/master/apk', [
+            'name' => 'New Scanner',
+            'username' => 'new_scanner',
+            'password' => 'pass1234',
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('el_apk', ['username' => 'new_scanner']);
+    }
+
     public function test_store_creates_account_in_staging_table_when_requested(): void
     {
         $this->actingUser();
@@ -205,6 +220,21 @@ class ApkControllerTest extends TestCase
         $response = $this->putJson('/api/master/apk/999999', ['name' => 'X']);
 
         $response->assertStatus(404);
+    }
+
+    public function test_update_returns_403_for_unauthorized_user(): void
+    {
+        $this->actingUnauthorizedUser();
+
+        $apk = ApkUser::factory()->create(['name' => 'Old Name']);
+
+        $response = $this->putJson("/api/master/apk/{$apk->id}", [
+            'name' => 'New Name',
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_apk', ['id' => $apk->id, 'name' => 'Old Name']);
     }
 
     public function test_reset_password_clears_token_and_updates_password(): void
@@ -321,6 +351,19 @@ class ApkControllerTest extends TestCase
         $response = $this->deleteJson('/api/master/apk/999999');
 
         $response->assertStatus(404);
+    }
+
+    public function test_destroy_returns_403_for_unauthorized_user(): void
+    {
+        $this->actingUnauthorizedUser();
+
+        $apk = ApkUser::factory()->create();
+
+        $response = $this->deleteJson("/api/master/apk/{$apk->id}");
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_apk', ['id' => $apk->id]);
     }
 
     public function test_index_requires_authentication(): void

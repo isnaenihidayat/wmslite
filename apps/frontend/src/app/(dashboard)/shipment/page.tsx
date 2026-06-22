@@ -44,6 +44,7 @@ const STATUS_OPTIONS = [
 
 export default function ShipmentPage() {
   const { data: session } = useSession();
+  const token       = session?.user?.accessToken;
   const isAdmin     = session?.user?.admin === 1;
   const userType    = session?.user?.type ?? 0;
   const canEdit     = isAdmin || userType === 2;
@@ -77,11 +78,11 @@ export default function ShipmentPage() {
     [pagination, debouncedSearch, statusFilter]
   );
 
-  const { data, isLoading, refetch }            = useShipmentList(queryParams);
-  const { mutate: doCreate, isPending: isCreating } = useCreateShipment();
-  const { mutate: doUpdate, isPending: isUpdating } = useUpdateShipment();
-  const { mutate: doDelete, isPending: isDeleting } = useDeleteShipment();
-  const { mutate: doPush,   isPending: isPushing }  = usePushToInbound();
+  const { data, isLoading, refetch }            = useShipmentList(queryParams, token);
+  const { mutate: doCreate, isPending: isCreating } = useCreateShipment(token);
+  const { mutate: doUpdate, isPending: isUpdating } = useUpdateShipment(token);
+  const { mutate: doDelete, isPending: isDeleting } = useDeleteShipment(token);
+  const { mutate: doPush,   isPending: isPushing }  = usePushToInbound(token);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleEdit = useCallback((row: Shipment) => {

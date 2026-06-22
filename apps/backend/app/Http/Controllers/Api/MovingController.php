@@ -62,6 +62,8 @@ class MovingController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('store', Moving::class);
+
         $validated = $request->validate([
             'hawb'       => ['required', 'string', 'max:255'],
             'hawb_descr' => ['nullable', 'string', 'max:255'],

@@ -144,6 +144,7 @@ function getMovingColumns(opts: {
 
 export default function MovingPage() {
   const { data: session } = useSession();
+  const token     = session?.user?.accessToken;
   const isAdmin   = session?.user?.admin === 1;
   const userType  = session?.user?.type ?? 0;
   const canCreate = isAdmin || userType === 1 || userType === 3;
@@ -164,9 +165,9 @@ export default function MovingPage() {
     [pagination, debouncedSearch]
   );
 
-  const { data, isLoading, refetch }                = useMovingList(queryParams);
-  const { mutate: doCreate, isPending: isCreating } = useCreateMoving();
-  const { mutate: doDelete, isPending: isDeleting } = useDeleteMoving();
+  const { data, isLoading, refetch }                = useMovingList(queryParams, token);
+  const { mutate: doCreate, isPending: isCreating } = useCreateMoving(token);
+  const { mutate: doDelete, isPending: isDeleting } = useDeleteMoving(token);
 
   const handleDelete    = useCallback((row: Moving) => setDeleteTarget(row), []);
   const handleConfirmDelete = useCallback(() => {

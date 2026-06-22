@@ -55,6 +55,7 @@ const WAREHOUSE_OPTIONS = [
 
 export default function InboundPage() {
   const { data: session } = useSession();
+  const token = session?.user?.accessToken;
   const isAdmin = session?.user?.admin === 1;
   const userType = session?.user?.type ?? 0;
   const canEdit = isAdmin || userType === 1 || userType === 3;
@@ -86,10 +87,10 @@ export default function InboundPage() {
     [pagination, debouncedSearch, statusFilter, warehouseFilter]
   );
 
-  const { data, isLoading, refetch } = useInboundList(queryParams);
-  const { mutate: doCreate, isPending: isCreating } = useCreateInbound();
-  const { mutate: doUpdate, isPending: isUpdating } = useUpdateInbound();
-  const { mutate: doDelete, isPending: isDeleting } = useDeleteInbound();
+  const { data, isLoading, refetch } = useInboundList(queryParams, token);
+  const { mutate: doCreate, isPending: isCreating } = useCreateInbound(token);
+  const { mutate: doUpdate, isPending: isUpdating } = useUpdateInbound(token);
+  const { mutate: doDelete, isPending: isDeleting } = useDeleteInbound(token);
 
   const handleEdit = useCallback((row: InboundRecord) => {
     setEditInbound(row);

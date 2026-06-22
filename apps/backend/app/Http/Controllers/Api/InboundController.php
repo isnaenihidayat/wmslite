@@ -129,6 +129,8 @@ class InboundController extends Controller
     {
         $inbound = Inbound::inboundOnly()->findOrFail($id);
 
+        $this->authorize('update', $inbound);
+
         $validated = $request->validate([
             'hawb'                => ['sometimes', 'string', 'max:255', "unique:el_inbound_header,hawb,{$id}"],
             'descr'               => ['sometimes', 'string', 'max:255'],
@@ -156,6 +158,9 @@ class InboundController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $inbound = Inbound::inboundOnly()->findOrFail($id);
+
+        $this->authorize('delete', $inbound);
+
         $inbound->delete();
 
         return response()->json(['message' => 'Inbound record deleted.']);

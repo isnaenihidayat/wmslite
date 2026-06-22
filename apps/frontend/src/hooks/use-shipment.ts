@@ -16,7 +16,7 @@ export const shipmentKeys = {
   list: (params: ShipmentListParams) => ["shipments", "list", params] as const,
 };
 
-export function useShipmentList(params: ShipmentListParams) {
+export function useShipmentList(params: ShipmentListParams, token: string | undefined) {
   const laravelParams = {
     ...params,
     page: (params.page ?? 0) + 1,
@@ -24,16 +24,17 @@ export function useShipmentList(params: ShipmentListParams) {
   };
   return useQuery({
     queryKey: shipmentKeys.list(params),
-    queryFn: () => fetchShipmentList(laravelParams),
+    queryFn: () => fetchShipmentList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useCreateShipment() {
+export function useCreateShipment(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: ShipmentFormData) => createShipment(form),
+    mutationFn: (form: ShipmentFormData) => createShipment(form, token as string),
     onSuccess: () => {
       toast.success("Shipment berhasil ditambahkan.");
       qc.invalidateQueries({ queryKey: shipmentKeys.all });
@@ -45,11 +46,11 @@ export function useCreateShipment() {
   });
 }
 
-export function useUpdateShipment() {
+export function useUpdateShipment(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<ShipmentFormData> }) =>
-      updateShipment(id, form),
+      updateShipment(id, form, token as string),
     onSuccess: () => {
       toast.success("Shipment berhasil diperbarui.");
       qc.invalidateQueries({ queryKey: shipmentKeys.all });
@@ -61,10 +62,10 @@ export function useUpdateShipment() {
   });
 }
 
-export function useDeleteShipment() {
+export function useDeleteShipment(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteShipment(id),
+    mutationFn: (id: number) => deleteShipment(id, token as string),
     onSuccess: () => {
       toast.success("Shipment berhasil dihapus.");
       qc.invalidateQueries({ queryKey: shipmentKeys.all });
@@ -76,10 +77,10 @@ export function useDeleteShipment() {
   });
 }
 
-export function usePushToInbound() {
+export function usePushToInbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => pushToInbound(id),
+    mutationFn: (id: number) => pushToInbound(id, token as string),
     onSuccess: (data) => {
       toast.success(data.message, {
         description: `Inbound ID: ${data.inbound_id}`,

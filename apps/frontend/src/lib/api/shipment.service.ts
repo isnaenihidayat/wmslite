@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,9 +59,11 @@ export interface ShipmentListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchShipmentList(
-  params: ShipmentListParams
+  params: ShipmentListParams,
+  token: string
 ): Promise<{ data: Shipment[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<Shipment>>(
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<Shipment>>(
     "/shipments",
     { params }
   );
@@ -72,26 +74,31 @@ export async function fetchShipmentList(
   };
 }
 
-export async function fetchShipment(id: number): Promise<Shipment> {
-  const response = await apiClient.get<{ data: Shipment }>(`/shipments/${id}`);
+export async function fetchShipment(id: number, token: string): Promise<Shipment> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<{ data: Shipment }>(`/shipments/${id}`);
   return response.data.data;
 }
 
-export async function createShipment(form: ShipmentFormData): Promise<Shipment> {
-  const response = await apiClient.post<{ data: Shipment }>("/shipments", form);
+export async function createShipment(form: ShipmentFormData, token: string): Promise<Shipment> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: Shipment }>("/shipments", form);
   return response.data.data;
 }
 
 export async function updateShipment(
   id: number,
-  form: Partial<ShipmentFormData>
+  form: Partial<ShipmentFormData>,
+  token: string
 ): Promise<Shipment> {
-  const response = await apiClient.put<{ data: Shipment }>(`/shipments/${id}`, form);
+  const client = createAuthenticatedClient(token);
+  const response = await client.put<{ data: Shipment }>(`/shipments/${id}`, form);
   return response.data.data;
 }
 
-export async function deleteShipment(id: number): Promise<void> {
-  await apiClient.delete(`/shipments/${id}`);
+export async function deleteShipment(id: number, token: string): Promise<void> {
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/shipments/${id}`);
 }
 
 export interface PushInboundResponse {
@@ -104,8 +111,9 @@ export interface PushInboundResponse {
   };
 }
 
-export async function pushToInbound(id: number): Promise<PushInboundResponse> {
-  const response = await apiClient.post<PushInboundResponse>(
+export async function pushToInbound(id: number, token: string): Promise<PushInboundResponse> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<PushInboundResponse>(
     `/shipments/${id}/push-inbound`
   );
   return response.data;

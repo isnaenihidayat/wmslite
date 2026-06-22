@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -54,8 +54,9 @@ export interface LaravelDashboardResponse {
 
 // ── API Functions ─────────────────────────────────────────────────────────────
 
-export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const response = await apiClient.get<LaravelDashboardResponse>(
+export async function fetchDashboardStats(token: string): Promise<DashboardStats> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<LaravelDashboardResponse>(
     "/dashboard/stats"
   );
 
@@ -170,8 +171,9 @@ const REPORT_COLUMNS_MAP: Record<ReportType, ReportColumn[]> = {
   ],
 };
 
-export async function fetchReport(params: ReportParams): Promise<ReportResult> {
-  const response = await apiClient.get<PaginatedResponse<ReportRow>>(
+export async function fetchReport(params: ReportParams, token: string): Promise<ReportResult> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<ReportRow>>(
     `/reports/${params.type}`,
     {
       params: {

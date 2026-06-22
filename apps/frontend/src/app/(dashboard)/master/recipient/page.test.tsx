@@ -3,6 +3,13 @@ import { screen, waitFor } from "@testing-library/react";
 import { renderWithQueryClient } from "@/test/render-with-providers";
 import RecipientPage from "./page";
 
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { admin: 1, type: 1, module: 4, accessToken: "test-token" } },
+    status: "authenticated",
+  }),
+}));
+
 vi.mock("@/lib/api/master.service", () => ({
   fetchRecipients: vi.fn().mockResolvedValue([]),
 }));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { fetchLocations } from "@/lib/api/master.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +12,14 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 
 export default function LocationsPage() {
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
   const [search, setSearch] = useState("");
 
   const { data: locations, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["master", "locations"],
-    queryFn: fetchLocations,
+    queryFn: () => fetchLocations(token as string),
+    enabled: !!token,
     staleTime: 5 * 60_000,
   });
 

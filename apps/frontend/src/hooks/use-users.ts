@@ -15,7 +15,7 @@ export const userKeys = {
   list: (params: UserListParams) => ["users", "list", params] as const,
 };
 
-export function useUserList(params: UserListParams) {
+export function useUserList(params: UserListParams, token: string | undefined) {
   const laravelParams = {
     ...params,
     page: (params.page ?? 0) + 1,
@@ -23,16 +23,17 @@ export function useUserList(params: UserListParams) {
   };
   return useQuery({
     queryKey: userKeys.list(params),
-    queryFn:  () => fetchUserList(laravelParams),
+    queryFn:  () => fetchUserList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useCreateUser() {
+export function useCreateUser(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: UserFormData & { password: string }) => createUser(form),
+    mutationFn: (form: UserFormData & { password: string }) => createUser(form, token as string),
     onSuccess: () => {
       toast.success("User berhasil dibuat.");
       qc.invalidateQueries({ queryKey: userKeys.all });
@@ -44,10 +45,10 @@ export function useCreateUser() {
   });
 }
 
-export function useUpdateUser() {
+export function useUpdateUser(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, form }: { id: number; form: Partial<UserFormData> }) => updateUser(id, form),
+    mutationFn: ({ id, form }: { id: number; form: Partial<UserFormData> }) => updateUser(id, form, token as string),
     onSuccess: () => {
       toast.success("User berhasil diperbarui.");
       qc.invalidateQueries({ queryKey: userKeys.all });
@@ -58,9 +59,9 @@ export function useUpdateUser() {
   });
 }
 
-export function useResetPassword() {
+export function useResetPassword(token: string | undefined) {
   return useMutation({
-    mutationFn: ({ id, password }: { id: number; password: string }) => resetUserPassword(id, password),
+    mutationFn: ({ id, password }: { id: number; password: string }) => resetUserPassword(id, password, token as string),
     onSuccess: (data) => {
       toast.success(data.message || "Password berhasil direset.");
     },
@@ -70,10 +71,10 @@ export function useResetPassword() {
   });
 }
 
-export function useDeleteUser() {
+export function useDeleteUser(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteUser(id),
+    mutationFn: (id: number) => deleteUser(id, token as string),
     onSuccess: () => {
       toast.success("User berhasil dihapus.");
       qc.invalidateQueries({ queryKey: userKeys.all });

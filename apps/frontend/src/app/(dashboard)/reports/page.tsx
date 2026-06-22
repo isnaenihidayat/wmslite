@@ -139,7 +139,7 @@ export default function ReportsPage() {
     [reportType, startDate, endDate, pagination]
   );
 
-  const { data, isLoading, isFetching, refetch } = useReport(reportParams, triggered);
+  const { data, isLoading, isFetching, refetch } = useReport(reportParams, triggered, session?.user?.accessToken);
 
   const columns = useMemo(() => buildColumns(data?.columns ?? []), [data?.columns]);
 

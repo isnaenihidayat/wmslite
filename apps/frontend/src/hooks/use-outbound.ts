@@ -16,16 +16,16 @@ export const outboundKeys = {
   detail:  (id: number) => ["outbounds", "detail", id] as const,
 };
 
-export function useOutboundDetails(id: number | null) {
+export function useOutboundDetails(id: number | null, token: string | undefined) {
   return useQuery({
     queryKey: outboundKeys.detail(id ?? 0),
-    queryFn:  () => fetchOutboundWithDetails(id!),
-    enabled:  id !== null && id > 0,
+    queryFn:  () => fetchOutboundWithDetails(id!, token as string),
+    enabled:  id !== null && id > 0 && !!token,
     staleTime: 60_000,
   });
 }
 
-export function useOutboundList(params: OutboundListParams) {
+export function useOutboundList(params: OutboundListParams, token: string | undefined) {
   const laravelParams = {
     ...params,
     page: (params.page ?? 0) + 1,
@@ -33,16 +33,17 @@ export function useOutboundList(params: OutboundListParams) {
   };
   return useQuery({
     queryKey: outboundKeys.list(params),
-    queryFn: () => fetchOutboundList(laravelParams),
+    queryFn: () => fetchOutboundList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useCreateOutbound() {
+export function useCreateOutbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: OutboundFormData) => createOutbound(form),
+    mutationFn: (form: OutboundFormData) => createOutbound(form, token as string),
     onSuccess: () => {
       toast.success("Outbound berhasil dibuat.");
       qc.invalidateQueries({ queryKey: outboundKeys.all });
@@ -54,11 +55,11 @@ export function useCreateOutbound() {
   });
 }
 
-export function useUpdateOutbound() {
+export function useUpdateOutbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, form }: { id: number; form: Partial<OutboundFormData> }) =>
-      updateOutbound(id, form),
+      updateOutbound(id, form, token as string),
     onSuccess: () => {
       toast.success("Outbound berhasil diperbarui.");
       qc.invalidateQueries({ queryKey: outboundKeys.all });
@@ -70,10 +71,10 @@ export function useUpdateOutbound() {
   });
 }
 
-export function useDeleteOutbound() {
+export function useDeleteOutbound(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteOutbound(id),
+    mutationFn: (id: number) => deleteOutbound(id, token as string),
     onSuccess: () => {
       toast.success("Outbound berhasil dihapus.");
       qc.invalidateQueries({ queryKey: outboundKeys.all });

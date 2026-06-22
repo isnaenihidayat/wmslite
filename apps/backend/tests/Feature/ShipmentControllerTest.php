@@ -19,6 +19,14 @@ class ShipmentControllerTest extends TestCase
         return $user;
     }
 
+    protected function actingAdmin(): User
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin, 'sanctum');
+
+        return $admin;
+    }
+
     public function test_index_returns_only_shipment_records(): void
     {
         $this->actingUser();
@@ -105,9 +113,15 @@ class ShipmentControllerTest extends TestCase
             ->assertJsonValidationErrors(['hawb']);
     }
 
+    /**
+     * go-live Phase 3, Section 1: ShipmentController::update()/destroy() are
+     * now admin-only (ShipmentPolicy, invoked directly — see ShipmentPolicy
+     * class doc comment). Pre-existing tests below that called actingUser()
+     * then mutated a record were updated to actingAdmin().
+     */
     public function test_update_modifies_shipment_record(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $shipment = Inbound::factory()->fromShipment()->create(['descr' => 'Old descr']);
 
@@ -117,6 +131,24 @@ class ShipmentControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.descr', 'New descr');
+    }
+
+    public function test_update_returns_403_for_non_admin(): void
+    {
+        $this->actingUser();
+
+        $shipment = Inbound::factory()->fromShipment()->create(['descr' => 'Old descr']);
+
+        $response = $this->putJson("/api/shipments/{$shipment->id}", [
+            'descr' => 'Should not apply',
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_inbound_header', [
+            'id' => $shipment->id,
+            'descr' => 'Old descr',
+        ]);
     }
 
     public function test_update_does_not_affect_inbound_only_record(): void
@@ -134,7 +166,7 @@ class ShipmentControllerTest extends TestCase
 
     public function test_destroy_deletes_shipment_record(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $shipment = Inbound::factory()->fromShipment()->create();
 
@@ -143,6 +175,19 @@ class ShipmentControllerTest extends TestCase
         $response->assertOk();
 
         $this->assertDatabaseMissing('el_inbound_header', ['id' => $shipment->id]);
+    }
+
+    public function test_destroy_returns_403_for_non_admin(): void
+    {
+        $this->actingUser();
+
+        $shipment = Inbound::factory()->fromShipment()->create();
+
+        $response = $this->deleteJson("/api/shipments/{$shipment->id}");
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_inbound_header', ['id' => $shipment->id]);
     }
 
     /**

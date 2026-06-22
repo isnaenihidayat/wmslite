@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { PaginationState, ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMonitoringList } from "@/lib/api/monitoring.service";
@@ -89,6 +90,8 @@ const columns: ColumnDef<ActivityLog>[] = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MonitoringPage() {
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
   const [search, setSearch]         = useState("");
   const debouncedSearch             = useDebounce(search, 400);
@@ -119,7 +122,8 @@ export default function MonitoringPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["monitoring", queryParams],
-    queryFn:  () => fetchMonitoringList(queryParams),
+    queryFn:  () => fetchMonitoringList(queryParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });

@@ -13,7 +13,7 @@ export const movingKeys = {
   list: (params: MovingListParams) => ["moving", "list", params] as const,
 };
 
-export function useMovingList(params: MovingListParams) {
+export function useMovingList(params: MovingListParams, token: string | undefined) {
   const laravelParams = {
     ...params,
     page: (params.page ?? 0) + 1,
@@ -21,16 +21,17 @@ export function useMovingList(params: MovingListParams) {
   };
   return useQuery({
     queryKey: movingKeys.list(params),
-    queryFn:  () => fetchMovingList(laravelParams),
+    queryFn:  () => fetchMovingList(laravelParams, token as string),
+    enabled: !!token,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
 
-export function useCreateMoving() {
+export function useCreateMoving(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (form: MovingFormData) => createMoving(form),
+    mutationFn: (form: MovingFormData) => createMoving(form, token as string),
     onSuccess: () => {
       toast.success("Moving record berhasil dibuat.");
       qc.invalidateQueries({ queryKey: movingKeys.all });
@@ -41,10 +42,10 @@ export function useCreateMoving() {
   });
 }
 
-export function useDeleteMoving() {
+export function useDeleteMoving(token: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteMoving(id),
+    mutationFn: (id: number) => deleteMoving(id, token as string),
     onSuccess: () => {
       toast.success("Moving record berhasil dihapus.");
       qc.invalidateQueries({ queryKey: movingKeys.all });

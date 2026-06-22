@@ -3,8 +3,10 @@ import axios, { AxiosInstance } from "axios";
 const LARAVEL_API = process.env.NEXT_PUBLIC_LARAVEL_API_URL || "http://localhost:8000/api";
 
 /**
- * Laravel API Client — primary client for all WMS Lite API calls.
- * Uses Bearer token (Sanctum) from session storage.
+ * Unauthenticated Laravel API client — for genuinely public endpoints only
+ * (e.g. the login request itself). No token is ever attached here; this app
+ * currently has no caller that needs it (login uses a raw `fetch` call in
+ * `lib/auth/auth.ts`), but it is kept as a minimal, safe fallback.
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: LARAVEL_API,
@@ -16,57 +18,11 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 15000,
 });
 
-// Request interceptor — inject Bearer token from storage
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("wms_access_token") 
-      || localStorage.getItem("wms_access_token");
-    if (token) {
-      config.headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Response interceptor — handle auth + error responses
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
-        // Clear stale token
-        sessionStorage.removeItem("wms_access_token");
-        localStorage.removeItem("wms_access_token");
-        window.location.href = "/login";
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-/**
- * Inject a token programmatically (called after login).
- * Stores in sessionStorage for the current browser session.
- */
-export function setAuthToken(token: string): void {
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("wms_access_token", token);
-  }
-}
-
-/**
- * Clear stored token (called on logout).
- */
-export function clearAuthToken(): void {
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem("wms_access_token");
-    localStorage.removeItem("wms_access_token");
-  }
-}
-
 /**
  * Create an authenticated client with a pre-set token.
- * Use this in Server Components / API Routes where we have the session token.
+ * This is the sole authenticated-call pattern: every service function takes
+ * a `token: string` (the NextAuth session's Sanctum access token) and builds
+ * its client via this helper. No token is ever read from browser storage.
  */
 export function createAuthenticatedClient(token: string): AxiosInstance {
   const client = axios.create({

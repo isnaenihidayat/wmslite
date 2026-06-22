@@ -124,6 +124,29 @@ class AuthControllerTest extends TestCase
             ->assertJsonValidationErrors(['email', 'password']);
     }
 
+    public function test_login_sixth_attempt_within_one_minute_returns_429(): void
+    {
+        User::factory()->create([
+            'email_address' => 'throttled@example.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'throttled@example.com',
+                'password' => 'wrongpassword',
+            ])->assertStatus(422);
+        }
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => 'throttled@example.com',
+            'password' => 'wrongpassword',
+        ]);
+
+        $response->assertStatus(429)
+            ->assertJsonStructure(['message']);
+    }
+
     public function test_logout_revokes_current_token(): void
     {
         $user = User::factory()->create();

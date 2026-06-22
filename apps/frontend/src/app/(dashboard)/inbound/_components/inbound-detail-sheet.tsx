@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import {
   Sheet,
   SheetContent,
@@ -81,12 +82,14 @@ export function InboundDetailSheet({
   inbound,
 }: InboundDetailSheetProps) {
   const inboundId = inbound?.id ?? null;
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
 
   // Fetch item details only when sheet is open
   const {
     data: detailItems,
     isLoading: itemsLoading,
-  } = useInboundDetails(open ? inboundId : null);
+  } = useInboundDetails(open ? inboundId : null, token);
 
   if (!inbound && !open) return null;
 

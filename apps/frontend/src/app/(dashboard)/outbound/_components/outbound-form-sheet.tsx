@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { fetchCategories } from "@/lib/api/master.service";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -72,6 +73,8 @@ export function OutboundFormSheet({
   isSubmitting,
 }: OutboundFormSheetProps) {
   const isEdit = !!outbound;
+  const { data: session } = useSession();
+  const token = session?.user?.accessToken;
 
   const form = useForm<OutboundSchema>({
     resolver: zodResolver(outboundSchema),
@@ -87,7 +90,8 @@ export function OutboundFormSheet({
 
   const { data: categories = [] } = useQuery({
     queryKey: ["master", "categories"],
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(token as string),
+    enabled: !!token,
     staleTime: 5 * 60_000,
   });
 

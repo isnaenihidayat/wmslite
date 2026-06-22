@@ -76,6 +76,8 @@ class ApkController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('store', ApkUser::class);
+
         $validated = $request->validate([
             'name'       => ['required', 'string', 'max:255'],
             'username'   => ['required', 'string', 'max:255', 'unique:el_apk,username'],
@@ -117,6 +119,8 @@ class ApkController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->authorize('update', ApkUser::class);
+
         $tbl   = $request->get('table', 'main') === 'staging' ? 'el_apk_s' : 'el_apk';
         $record = DB::table($tbl)->where('id', $id)->first();
 
@@ -200,6 +204,8 @@ class ApkController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->authorize('delete', ApkUser::class);
+
         $tbl    = $request->get('table', 'main') === 'staging' ? 'el_apk_s' : 'el_apk';
         $record = DB::table($tbl)->where('id', $id)->first();
 

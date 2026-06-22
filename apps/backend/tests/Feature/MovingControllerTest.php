@@ -74,7 +74,7 @@ class MovingControllerTest extends TestCase
 
     public function test_store_creates_moving_record_with_current_user(): void
     {
-        $user = $this->actingUser();
+        $user = $this->actingAdmin();
 
         $payload = [
             'hawb' => 'HAWB-99999999',
@@ -99,12 +99,30 @@ class MovingControllerTest extends TestCase
 
     public function test_store_requires_required_fields(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $response = $this->postJson('/api/moving', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['hawb', 'loc_before', 'loc_after']);
+    }
+
+    public function test_store_returns_403_for_non_admin(): void
+    {
+        $this->actingUser();
+
+        $payload = [
+            'hawb' => 'HAWB-99999999',
+            'hawb_descr' => 'Test item',
+            'loc_before' => 'RACK-01',
+            'loc_after' => 'RACK-02',
+        ];
+
+        $response = $this->postJson('/api/moving', $payload);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('el_moving', ['hawb' => 'HAWB-99999999']);
     }
 
     public function test_destroy_deletes_moving_record(): void

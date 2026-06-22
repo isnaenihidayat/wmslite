@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inbound;
+use App\Policies\ShipmentPolicy;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -101,6 +103,8 @@ class ShipmentController extends Controller
     {
         $shipment = Inbound::shipments()->findOrFail($id);
 
+        $this->authorizeShipment('update', $request);
+
         $validated = $request->validate([
             'hawb'                => ['sometimes', 'string', 'max:255', "unique:el_inbound_header,hawb,{$id}"],
             'descr'               => ['sometimes', 'string', 'max:255'],
@@ -126,9 +130,12 @@ class ShipmentController extends Controller
     /**
      * DELETE /api/shipments/{id}
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $shipment = Inbound::shipments()->findOrFail($id);
+
+        $this->authorizeShipment('delete', $request);
+
         $shipment->delete();
 
         return response()->json(['message' => 'Shipment deleted successfully.']);
@@ -156,5 +163,28 @@ class ShipmentController extends Controller
             'inbound_id' => $shipment->id,
             'data'       => $shipment->fresh()->load('category'),
         ], 201);
+    }
+
+    /**
+     * Authorize against ShipmentPolicy directly (not via the Gate facade).
+     *
+     * ShipmentController operates on the same Inbound::class model as
+     * InboundController, and Gate::policy() is keyed by model class —
+     * Inbound::class is already bound to InboundPolicy in
+     * AppServiceProvider::boot(). Routing this through $this->authorize()
+     * (which resolves via the Gate) would invoke InboundPolicy instead of
+     * ShipmentPolicy. Since both Policies currently enforce the identical
+     * admin-only rule, this is not a behavioral risk today, but it would
+     * silently mask a future divergence between the two rules. Calling
+     * ShipmentPolicy's method directly keeps the two Policies independently
+     * meaningful. Throwing AuthorizationException manually reproduces the
+     * exact 403 response shape Gate-based authorization would have produced
+     * (bootstrap/app.php already renders all api/* exceptions as JSON).
+     */
+    protected function authorizeShipment(string $ability, Request $request): void
+    {
+        if (! app(ShipmentPolicy::class)->{$ability}($request->user())) {
+            throw new AuthorizationException('This action is unauthorized.');
+        }
     }
 }

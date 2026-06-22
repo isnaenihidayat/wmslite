@@ -19,6 +19,14 @@ class OutboundControllerTest extends TestCase
         return $user;
     }
 
+    protected function actingAdmin(): User
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin, 'sanctum');
+
+        return $admin;
+    }
+
     public function test_index_returns_paginated_outbound_with_category(): void
     {
         $this->actingUser();
@@ -116,9 +124,14 @@ class OutboundControllerTest extends TestCase
             ->assertJsonValidationErrors(['destination']);
     }
 
+    /**
+     * go-live Phase 3, Section 1: OutboundController::update()/destroy() are
+     * now admin-only (OutboundPolicy). Pre-existing tests below that called
+     * actingUser() then mutated a record were updated to actingAdmin().
+     */
     public function test_update_modifies_outbound_record(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $outbound = Outbound::factory()->create(['status' => 'inprogress', 'destination' => 'Old Dest']);
 
@@ -137,7 +150,7 @@ class OutboundControllerTest extends TestCase
 
     public function test_update_rejects_successful_outbound(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $outbound = Outbound::factory()->create(['status' => 'successful']);
 
@@ -153,9 +166,27 @@ class OutboundControllerTest extends TestCase
         ]);
     }
 
-    public function test_destroy_deletes_outbound_record(): void
+    public function test_update_returns_403_for_non_admin(): void
     {
         $this->actingUser();
+
+        $outbound = Outbound::factory()->create(['status' => 'inprogress', 'destination' => 'Old Dest']);
+
+        $response = $this->putJson("/api/outbound/{$outbound->id}", [
+            'destination' => 'Should not apply',
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('el_outbound_header', [
+            'id' => $outbound->id,
+            'destination' => 'Old Dest',
+        ]);
+    }
+
+    public function test_destroy_deletes_outbound_record(): void
+    {
+        $this->actingAdmin();
 
         $outbound = Outbound::factory()->create(['status' => 'inprogress']);
 
@@ -168,13 +199,26 @@ class OutboundControllerTest extends TestCase
 
     public function test_destroy_rejects_successful_outbound(): void
     {
-        $this->actingUser();
+        $this->actingAdmin();
 
         $outbound = Outbound::factory()->create(['status' => 'successful']);
 
         $response = $this->deleteJson("/api/outbound/{$outbound->id}");
 
         $response->assertStatus(422);
+
+        $this->assertDatabaseHas('el_outbound_header', ['id' => $outbound->id]);
+    }
+
+    public function test_destroy_returns_403_for_non_admin(): void
+    {
+        $this->actingUser();
+
+        $outbound = Outbound::factory()->create(['status' => 'inprogress']);
+
+        $response = $this->deleteJson("/api/outbound/{$outbound->id}");
+
+        $response->assertStatus(403);
 
         $this->assertDatabaseHas('el_outbound_header', ['id' => $outbound->id]);
     }

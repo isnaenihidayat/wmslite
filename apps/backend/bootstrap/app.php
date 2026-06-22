@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceJsonResponse::class,
         ]);
 
+        // Security response headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         // CORS headers
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
 

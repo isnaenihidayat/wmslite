@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { createAuthenticatedClient } from "@/lib/api/client";
 import type { PaginatedResponse } from "./shipment.service";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -66,9 +66,11 @@ export interface InboundListParams {
 // ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchInboundList(
-  params: InboundListParams
+  params: InboundListParams,
+  token: string
 ): Promise<{ data: Inbound[]; total: number; lastPage: number }> {
-  const response = await apiClient.get<PaginatedResponse<Inbound>>(
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<PaginatedResponse<Inbound>>(
     "/inbound",
     { params }
   );
@@ -79,31 +81,37 @@ export async function fetchInboundList(
   };
 }
 
-export async function fetchInbound(id: number): Promise<Inbound> {
-  const response = await apiClient.get<{ data: Inbound }>(`/inbound/${id}`);
+export async function fetchInbound(id: number, token: string): Promise<Inbound> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<{ data: Inbound }>(`/inbound/${id}`);
   return response.data.data;
 }
 
-export async function fetchInboundDetails(id: number): Promise<InboundDetail[]> {
-  const response = await apiClient.get<{ data: InboundDetail[] }>(
+export async function fetchInboundDetails(id: number, token: string): Promise<InboundDetail[]> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.get<{ data: InboundDetail[] }>(
     `/inbound/${id}/details`
   );
   return response.data.data;
 }
 
-export async function createInbound(form: InboundFormData): Promise<Inbound> {
-  const response = await apiClient.post<{ data: Inbound }>("/inbound", form);
+export async function createInbound(form: InboundFormData, token: string): Promise<Inbound> {
+  const client = createAuthenticatedClient(token);
+  const response = await client.post<{ data: Inbound }>("/inbound", form);
   return response.data.data;
 }
 
 export async function updateInbound(
   id: number,
-  form: Partial<InboundFormData>
+  form: Partial<InboundFormData>,
+  token: string
 ): Promise<Inbound> {
-  const response = await apiClient.put<{ data: Inbound }>(`/inbound/${id}`, form);
+  const client = createAuthenticatedClient(token);
+  const response = await client.put<{ data: Inbound }>(`/inbound/${id}`, form);
   return response.data.data;
 }
 
-export async function deleteInbound(id: number): Promise<void> {
-  await apiClient.delete(`/inbound/${id}`);
+export async function deleteInbound(id: number, token: string): Promise<void> {
+  const client = createAuthenticatedClient(token);
+  await client.delete(`/inbound/${id}`);
 }
