@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { getOutboundColumns } from "./_components/columns";
 import { OutboundFormSheet } from "./_components/outbound-form-sheet";
 import { OutboundDetailSheet } from "./_components/outbound-detail-sheet";
@@ -58,9 +59,7 @@ export default function OutboundPage() {
   const debouncedSearch = useDebounce(search, 400);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, statusFilter]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, statusFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editOutbound, setEditOutbound] = useState<OutboundHeader | null>(null);

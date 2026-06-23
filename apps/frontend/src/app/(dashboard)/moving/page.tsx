@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,9 +157,7 @@ export default function MovingPage() {
   const [formOpen, setFormOpen]     = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Moving | null>(null);
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch]);
 
   const queryParams = useMemo(
     () => ({ page: pagination.pageIndex, per_page: pagination.pageSize, search: debouncedSearch }),

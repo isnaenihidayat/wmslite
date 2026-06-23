@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState, ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMonitoringList } from "@/lib/api/monitoring.service";
 import type { ActivityLog, MonitoringListParams } from "@/lib/api/monitoring.service";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { StatusBadge } from "@/components/data-table/status-badge";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import {
@@ -104,9 +105,7 @@ export default function MonitoringPage() {
   });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, statusFilter, dateFrom, dateTo]);
 
   const queryParams = useMemo<MonitoringListParams>(
     () => ({

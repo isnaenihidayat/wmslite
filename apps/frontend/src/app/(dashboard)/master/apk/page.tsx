@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState, ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -261,9 +262,7 @@ export default function ApkPage() {
   const [logoutTarget, setLogoutTarget] = useState<ApkAccount | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApkAccount | null>(null);
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, tableFilter]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, tableFilter]);
 
   const queryParams = useMemo(() => ({
     page:     pagination.pageIndex,

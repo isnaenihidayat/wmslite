@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { getShipmentColumns } from "./_components/columns";
 import { ShipmentFormSheet } from "./_components/shipment-form-sheet";
 import { Button } from "@/components/ui/button";
@@ -57,9 +58,7 @@ export default function ShipmentPage() {
   const debouncedSearch             = useDebounce(search, 400);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, statusFilter]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, statusFilter]);
 
   // ── Sheet / Dialog State ──────────────────────────────────────────────────
   const [formOpen, setFormOpen]           = useState(false);

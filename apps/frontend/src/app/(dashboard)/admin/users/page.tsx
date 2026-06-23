@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState, ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { SortableHeader } from "@/components/data-table/sortable-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -257,9 +258,7 @@ export default function AdminUsersPage() {
   const [deleteTarget, setDeleteTarget]   = useState<AppUser | null>(null);
   const [resetPwTarget, setResetPwTarget] = useState<AppUser | null>(null);
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, statusFilter]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, statusFilter]);
 
   const queryParams = useMemo(
     () => ({

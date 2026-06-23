@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { PaginationState } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { useResetPageOnFilterChange } from "@/hooks/use-reset-page-on-change";
 import { getInboundColumns } from "./_components/columns";
 import { InboundFormSheet } from "./_components/inbound-form-sheet";
 import { InboundDetailSheet } from "./_components/inbound-detail-sheet";
@@ -67,9 +68,7 @@ export default function InboundPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
 
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [debouncedSearch, statusFilter, warehouseFilter]);
+  useResetPageOnFilterChange(pagination, setPagination, [debouncedSearch, statusFilter, warehouseFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editInbound, setEditInbound] = useState<InboundRecord | null>(null);
