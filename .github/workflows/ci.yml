@@ -1,0 +1,138 @@
+name: CI
+
+# Test-only pipeline. No deploy/CD job — see Tier 2 backlog:
+# process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (PHP / Laravel)
+    runs-on: ubuntu-latest
+
+    # Ephemeral MySQL service container, destroyed at the end of the run.
+    # DB_DATABASE below MUST be the literal string "wmslite_test" — it is
+    # matched against a hard-coded guard in
+    # apps/backend/app/Console/Commands/SetupTestDatabase.php that refuses to
+    # run against anything else.
+    #
+    # Credentials below are plain literal values, intentionally NOT GitHub
+    # Secrets. They are the exact same values already committed in
+    # apps/backend/phpunit.xml (tracked in git, not gitignored), used only
+    # against this disposable, network-isolated, CI-only `wmslite_test`
+    # container that is destroyed at the end of every run. There is no real
+    # secret to protect here — the value is already public in git history and
+    # never reaches a real database. Using GitHub Secrets for this value would
+    # be unnecessary overhead, not a security improvement.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wmslite_test
+          MYSQL_USER: wmslite_user
+          MYSQL_PASSWORD: wmslite_2026
+          MYSQL_ROOT_PASSWORD: ci_ephemeral_root_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: apps/backend
+
+    # These env vars drive the `test:setup-db` artisan step (plain process
+    # env resolution via Laravel's env() helper) and match the service
+    # container credentials above and apps/backend/phpunit.xml's own <env>
+    # block exactly, so the schema-setup guard and the PHPUnit run both
+    # target the same throwaway database with the same credentials.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: wmslite_test
+      DB_USERNAME: wmslite_user
+      DB_PASSWORD: wmslite_2026
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/backend/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h 127.0.0.1 -P 3306 -u "${{ env.DB_USERNAME }}" --password="${{ env.DB_PASSWORD }}" --silent && break
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+
+      - name: Run test suite (composer test)
+        run: composer test
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+# Tier 2 (deploy/CD job) is deferred — see
+# process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md
