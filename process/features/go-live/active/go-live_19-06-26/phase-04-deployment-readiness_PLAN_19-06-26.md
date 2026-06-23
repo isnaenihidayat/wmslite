@@ -13,8 +13,8 @@ metadata:
 
 **Program:** go-live
 **Umbrella plan:** process/features/go-live/active/go-live_19-06-26/go-live-umbrella_PLAN_19-06-26.md
-**Phase status:** ⏳ PLANNED
-**Report destination:** process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_REPORT_19-06-26.md (flat in the program task folder)
+**Phase status:** ✅ VERIFIED (Tier 1 scope only — Tier 2 deferred to backlog, blocked on VPS provisioning)
+**Report destination:** process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_REPORT_19-06-26.md (written 23-06-26)
 
 ---
 
@@ -102,9 +102,16 @@ section for the 2 new NOTE files this split produced.
 - [x] 1c. Frontend job: cache npm dependencies (`npm ci`). Run `npm run test`, then `npm run lint`,
       then `npm run build` — fail fast on the first failing step.
 - [x] 1d. Trigger on `push` and `pull_request` targeting `main`. No deploy/CD job in this workflow.
-- [ ] 1e. Push the workflow file and a trivial follow-up commit (or open a PR) to actually trigger a
-      real GitHub Actions run. Confirm the run is green in the GitHub Actions UI — record the run
-      URL/ID as evidence. A workflow file that has never executed does not satisfy this step.
+- [x] 1e. **Done (23-06-26):** Pushed and observed 3 real runs. Run 1
+      (`28008703575`) failed both jobs — found 2 latent issues with no prior automated check:
+      `composer.lock` requires PHP >=8.4 (CI was pinned to 8.3; bumped to 8.5 to match actual dev
+      environment) and 7 pre-existing `react-hooks/set-state-in-effect` lint errors across 7
+      dashboard pages (fixed via a shared `useResetPageOnFilterChange` hook, no behavior change —
+      user-approved as in-scope). Run 2 (`28009522620`) — frontend job green, backend still failed:
+      `apps/backend/bootstrap/cache/` is untracked by git, so a fresh CI checkout lacks it and
+      Laravel's `package:discover` post-autoload script aborts. Added a `mkdir -p bootstrap/cache`
+      step before `composer install`. Run 3 (`28009757927`) — **both jobs green.**
+      Evidence: https://github.com/isnaenihidayat/wmslite/actions/runs/28009757927
 
 ### Step 2 — Environment variable documentation
 
@@ -206,9 +213,41 @@ cd apps/frontend && npm run test && npm run lint && npm run build
 - [x] 2. INNOVATE — innovate-agent: approach decided; Decision Summary written
 - [x] 3. PLAN-SUPPLEMENT — plan-agent: existing phase plan updated (or "n/a — research clean")
 - [x] 4. PVL — vc-validate-agent: full V1-V7; validate-contract written
-- [ ] 5. EXECUTE — all checklist items done; per-section test gates run and green
-- [ ] 6. EVL — all EVL gates green; follow-up stubs registered; EVL HANDOFF SUMMARY written
-- [ ] 7. UPDATE PROCESS — phase report written, umbrella state updated, commit done
+- [x] 5. EXECUTE — all checklist items done; per-section test gates run and green (Tier 1 scope only;
+      Tier 2 — real VPS deploy/CD/live backup/real rollback — deferred to backlog, blocked on VPS
+      provisioning)
+- [x] 6. EVL — all EVL gates green; follow-up stubs registered; EVL HANDOFF SUMMARY written
+- [x] 7. UPDATE PROCESS — phase report written, umbrella state updated, commit done
+
+## EVL HANDOFF SUMMARY (23-06-26)
+
+Full regression sweep after Steps 1-5 (Tier 1) complete:
+
+- `cd apps/backend && composer test` → 181 tests, 474 assertions, **0 failures**
+- `cd apps/frontend && npm run test` → 14 test files, 19 tests, **0 failures**
+- `cd apps/frontend && npm run lint` → **0 errors** (13 pre-existing unrelated warnings), down from 7
+  errors — fixed in this phase as a user-approved small scope addition (CI surfaced them as real
+  blockers; not part of original Tier 1 checklist but completed since CI couldn't go green otherwise)
+- `cd apps/frontend && npm run build` → succeeds, all routes compile
+- `node .claude/skills/vc-generate-context/scripts/validate-all-context.mjs` → 0 warnings/failures
+- `node .claude/skills/vc-audit-context/scripts/validate-context-discovery.mjs` → 0 warnings/failures
+- **Real CI evidence**: 3 GitHub Actions runs observed (28008703575 fail → 28009522620 partial →
+  28009757927 **both jobs green**) — https://github.com/isnaenihidayat/wmslite/actions/runs/28009757927
+- Backup/restore proof-of-concept: 34/34 tables match, checksums identical, `wmslite_test` left clean
+
+Regression check against Phase 1+2+3 (all VERIFIED): backend test count unchanged at 181 (Phase 4
+added no new backend tests, only fixed CI portability), frontend test count unchanged at 19. No
+prior test broken; only the 7 pre-existing lint errors (present since Phase 1, never blocking
+before CI existed) were fixed.
+
+Follow-up stubs registered (backlog, Tier 2 — blocked on VPS provisioning):
+- `process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md`
+- `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md`
+
+New finding for backlog (not previously tracked): `apps/backend/composer.json` declares
+`"php": "^8.3"` but `composer.lock` has resolved dependencies requiring PHP >=8.4 — this constraint
+string is now stale and should be corrected in a future cleanup pass (out of Phase 4's docs/CI-only
+blast radius).
 
 **Validate-contract required before execute.**
 
@@ -249,10 +288,9 @@ mysql wmslite_test < /tmp/wmslite_test_backup.sql
 ## Resume and Execution Handoff
 
 - Selected plan file path: `process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_PLAN_19-06-26.md`
-- Last completed step: PVL (Phase Loop Progress step 4) — validate-contract written, gate CONDITIONAL.
-- Validate-contract status: written (23-06-26), gate CONDITIONAL, pending user review.
-- Next step: User reviews validate-contract (Open gaps + Execute-agent instructions E1-E4 below). On
-  acceptance, spawn vc-execute-agent for Step 5 (PHASE LOOP), per the accepted CONDITIONAL gate.
+- Last completed step: 7 (UPDATE PROCESS) — phase report written, umbrella state updated, commit done.
+- Validate-contract status: written (23-06-26), gate CONDITIONAL, accepted by user before EXECUTE.
+- Next step: Phase 4 is ✅ VERIFIED (Tier 1). Proceed to Phase 5 — Yii Cutover Plan, Step 0/RESEARCH.
 
 ---
 

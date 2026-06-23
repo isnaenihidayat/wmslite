@@ -220,7 +220,7 @@ During /goal execution of a phase program:
 | 01 — Test Infrastructure Foundation | ✅ VERIFIED |
 | 02 — Data Model & Auth Hardening | ✅ VERIFIED |
 | 03 — Security & Validation Audit | ✅ VERIFIED |
-| 04 — Deployment Readiness | ⏳ PLANNED |
+| 04 — Deployment Readiness | ✅ VERIFIED (Tier 1 only) |
 | 05 — Legacy Yii Cutover Plan | ⏳ PLANNED |
 
 Status values: ⏳ PLANNED | 🔨 CODE DONE | 🧪 TESTING | ✅ VERIFIED | 🚧 BLOCKED | ✅ COMPLETE
@@ -297,38 +297,35 @@ node .claude/skills/vc-audit-context/scripts/validate-context-discovery.mjs
 
 ## Current Execution State
 
-Last updated: 22-06-26
-Completed phases: Phase 0, Phase 1, Phase 2, Phase 3
-Current phase: Phase 4 — Deployment Readiness
+Last updated: 23-06-26
+Completed phases: Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 (Tier 1)
+Current phase: Phase 5 — Legacy Yii Cutover Plan
 Current loop step: RESEARCH (pending — not yet started)
-Validate-contract status: Phase 1+2+3 written and accepted (Phase 3 CONDITIONAL, accepted as-is); Phase 4 pending
+Validate-contract status: Phase 1+2+3+4 written and accepted (Phase 3 CONDITIONAL accepted as-is; Phase 4 CONDITIONAL accepted as-is, all 4 concerns resolved via execute-agent instructions); Phase 5 pending
 Program Net Gate: PENDING
-Latest validator run: 22-06-26 — backend `composer test` 181 tests/474 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run build` succeeds (17 routes); `npm run lint` 7 pre-existing errors/13 pre-existing warnings unchanged; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures
+Latest validator run: 23-06-26 — backend `composer test` 181 tests/474 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run lint` 0 errors (13 pre-existing unrelated warnings, down from 7 errors fixed in Phase 4); `npm run build` succeeds; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures; real GitHub Actions CI run green (`28009757927`)
 
-Phase 3 report: `process/features/go-live/active/go-live_19-06-26/phase-03-security-audit_REPORT_19-06-26.md`
+Phase 4 report: `process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_REPORT_19-06-26.md`
 
-Phase 3 closeout notes for Phase 4 RESEARCH:
-- CRUD authorization for Inbound/Outbound/Shipment `update`/`destroy` is now gated (admin-only, via
-  `InboundPolicy`/`OutboundPolicy`/`ShipmentPolicy`). `store`/`index`/`show` on those 3 controllers
-  and all master-data CRUD remain ungated — see
-  `process/features/go-live/backlog/crud-store-read-authz_NOTE_22-06-26.md` (needs a product
-  decision, not a Phase 4 task, but worth knowing before deployment).
-- Token storage architecture changed: the Sanctum bearer token no longer touches browser
-  `sessionStorage`/`localStorage` at all (`token-sync.tsx` deleted). All frontend API calls now
-  thread the token via `useSession()` -> `createAuthenticatedClient(token)`. Any new frontend
-  feature work after this point must follow that pattern, not the old `apiClient` singleton.
-- Sanctum token expiration is now 480 minutes (8h), matching the frontend session `maxAge`. Login is
-  rate-limited (`email+ip`, 5/min). Phase 4 should confirm the rate limiter's cache backend is
-  consistent across however many app instances the deployment target runs — a single shared cache
-  store assumption is currently undocumented.
-- CSP header explicitly deferred (`process/features/go-live/backlog/csp-header_NOTE_22-06-26.md`) —
-  needs dedicated browser testing, not a quick add-on; do not assume it ships with Phase 4 unless
-  separately scoped.
-- Module-scoped read filtering (Section 7) deferred — no data table carries a per-record `module`
-  column (`process/features/go-live/backlog/module-scoped-data-filtering_NOTE_21-06-26.md`). This is
-  a data-model decision, unrelated to deployment readiness.
-- Also still open from Phase 2: `process/features/go-live/backlog/tables-schema-staleness_NOTE_21-06-26.md`
-  — schema-dump staleness note that may resurface in Phase 4/5.
+Phase 4 closeout notes for Phase 5 RESEARCH:
+- CI now exists and is green (`.github/workflows/ci.yml`, backend + frontend jobs) — any Phase 5
+  Yii cutover work that touches backend/frontend code runs through CI on every push to `main` and
+  must keep it green.
+- `apps/backend/composer.json` declares `"php": "^8.3"` but `composer.lock` resolves dependencies
+  requiring PHP >=8.4 — stale constraint string, not yet fixed (out of Phase 4's blast radius). See
+  `process/features/go-live/backlog/composer-php-constraint-stale_NOTE_23-06-26.md`.
+- Tier 2 deployment items remain blocked on VPS provisioning: real VPS deploy, CD pipeline, backup
+  proven against the live `wmslite` database, an actually-executed rollback, and the rate-limiter
+  cache backend decision. See `process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md`
+  and `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md`. Phase 5's Yii
+  cutover *plan* can still be written, but full cutover execution likely cannot complete until a
+  real hosting target exists.
+- Env var documentation (`apps/backend/.env.example`, `apps/frontend/.env.local.example`,
+  `all-context.md` Env var groups) is now complete and current for everything that exists today —
+  any new env var introduced in Phase 5 should be added to all three in the same pass.
+- Still open from earlier phases (unchanged by Phase 4): `crud-store-read-authz_NOTE_22-06-26.md`,
+  `csp-header_NOTE_22-06-26.md`, `module-scoped-data-filtering_NOTE_21-06-26.md`,
+  `tables-schema-staleness_NOTE_21-06-26.md`.
 
 Loop step values: RESEARCH | INNOVATE | PLAN-SUPPLEMENT | PVL | EXECUTE | EVL | UPDATE-PROCESS
 Orchestrator rule: read "Current loop step" and "validate-contract status" before spawning any subagent. Never spawn execute-agent when loop step is RESEARCH, INNOVATE, PLAN-SUPPLEMENT, or PVL.
