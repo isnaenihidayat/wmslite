@@ -1,6 +1,6 @@
 # WMS Lite - All Context
 
-Last updated: 2026-06-21
+Last updated: 2026-06-23
 
 This file is the root context entrypoint for the repo.
 
@@ -287,12 +287,14 @@ wmslite/
 
 **Config files:** `apps/frontend/.env*` (Next.js env files, git-ignored), `apps/backend/.env` / `.env.example` (Laravel), `tsconfig.json` (frontend path aliases), `phpunit.xml` (backend test config).
 
-**Env var groups (names only, never values) — confirmed against `apps/frontend/src/lib/auth/auth.ts` and local `.env` during go-live Phase 2 RESEARCH (21-06-26):**
-- Frontend → Backend API: `NEXT_PUBLIC_LARAVEL_API_URL`
-- Frontend auth (NextAuth v5): `NEXTAUTH_SECRET`, `NEXTAUTH_URL` — confirmed
+**Env var groups (names only, never values) — confirmed against `apps/frontend/src/lib/auth/auth.ts` and local `.env` during go-live Phase 2 RESEARCH (21-06-26), updated during go-live Phase 4 Step 2 (23-06-26):**
+- Frontend → Backend API: `NEXT_PUBLIC_LARAVEL_API_URL` — differs per environment (local/staging/production); see `apps/frontend/.env.local.example`
+- Frontend auth (NextAuth v5): `NEXTAUTH_SECRET`, `NEXTAUTH_URL` — confirmed; both differ per environment
 - Backend database: `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (defaults to sqlite in `.env.example`; production target is the shared MySQL instance)
 - Backend app/framework: standard Laravel `APP_*` vars (`APP_NAME`, `APP_ENV`, `APP_KEY`, `APP_DEBUG`, `APP_URL`)
-- Backend auth: Sanctum-related config in `config/sanctum.php` (stateful domains, token expiration) rather than dedicated env vars beyond the standard Laravel set
+- Backend auth (Sanctum): token `expiration` (480 min) is hardcoded in `config/sanctum.php`, no env var. `SANCTUM_STATEFUL_DOMAINS` and `SANCTUM_TOKEN_PREFIX` ARE real env-backed config keys (Laravel/Sanctum framework defaults already wired via `env()` in `config/sanctum.php`) — corrected during Phase 4 Step 2 audit; previously undocumented here. Not actively exercised today since the app authenticates via Bearer token rather than the stateful-SPA-cookie flow.
+- Backend cache / Phase 3 rate limiter: `CACHE_STORE` backs both the general Laravel cache facade AND the Phase 3 login rate limiter (`RateLimiter::for('login', ...)` in `AppServiceProvider::boot()`) — no separate dedicated rate-limiter cache var exists. `database` driver is fine for a single app instance; needs to become a shared store (e.g. Redis) if a future VPS deployment runs multiple instances — see `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md` (Tier 2/backlog, blocked on VPS topology).
+- Backend CORS — **known gap, confirmed during Phase 4 Step 2 audit:** `config/cors.php` `allowed_origins` is currently **hardcoded** to `http://localhost:3000` in the config file itself (go-live Phase 3, Section 9) — there is NO env var for this today, despite the allowed origin needing to differ per environment (local/staging/production). `CORS_ALLOWED_ORIGIN` does not exist in code; documented as a placeholder/TBD in `apps/backend/.env.example` for future wiring, not yet implemented.
 
 ## Confirmed Facts (resolved during go-live Phase 2, 21-06-26)
 

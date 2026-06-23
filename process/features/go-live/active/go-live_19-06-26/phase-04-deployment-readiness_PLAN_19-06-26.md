@@ -108,48 +108,50 @@ section for the 2 new NOTE files this split produced.
 
 ### Step 2 — Environment variable documentation
 
-- [ ] 2a. Audit `apps/backend/.env.example` against the live `apps/backend/.env` and all Phase 3
+- [x] 2a. Audit `apps/backend/.env.example` against the live `apps/backend/.env` and all Phase 3
       additions (CORS allowed origin var, rate-limiter cache driver var if one was introduced,
       Sanctum token expiration var). Add any missing variable names with `TBD`/placeholder values
       only — never copy real secrets.
-- [ ] 2b. Create `apps/frontend/.env.local.example` (does not exist yet) documenting
+- [x] 2b. Create `apps/frontend/.env.local.example` (does not exist yet) documenting
       `NEXT_PUBLIC_LARAVEL_API_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and any other frontend env
       var confirmed in `process/context/all-context.md`. Mark staging/production URL values as
       `TBD` since no such environment exists yet.
-- [ ] 2c. Cross-check both files against `process/context/all-context.md` "Env var groups" section
+- [x] 2c. Cross-check both files against `process/context/all-context.md` "Env var groups" section
       — update that context section if Phase 3 introduced a var not yet documented there.
 
 ### Step 3 — MySQL backup/restore runbook (proof-of-concept tested)
 
-- [ ] 3a. Write a new runbook doc covering: `mysqldump` backup command (with flags suitable for a
+- [x] 3a. Write a new runbook doc covering: `mysqldump` backup command (with flags suitable for a
       shared, live, multi-consumer database — e.g. consistent single-transaction dump), restore
       command, and a recommended backup schedule/retention note (advisory only, no scheduler is
       being built this phase).
-- [ ] 3b. Execute the dump + restore mechanism once against the `wmslite_test` database (never
+- [x] 3b. Execute the dump + restore mechanism once against the `wmslite_test` database (never
       `wmslite`). Record the exact commands run and their output/exit codes as evidence in the
       runbook or phase report.
-- [ ] 3c. Add an explicit caveat section to the runbook: this is a **mechanism proof against a local
+- [x] 3c. Add an explicit caveat section to the runbook: this is a **mechanism proof against a local
       test database**, not an operational guarantee for a real production VPS — host disk space,
       network reliability, backup storage location, and retention automation are all Tier 2/backlog
       concerns that remain unverified until a real VPS exists.
 
 ### Step 4 — Code rollback runbook (documentation only)
 
-- [ ] 4a. Write a new runbook doc describing a git-tag-based rollback strategy: tag every deploy,
+- [x] 4a. Write a new runbook doc describing a git-tag-based rollback strategy: tag every deploy,
       keep the previous tag's build artifact reachable, and document the restart/redeploy steps to
       revert to the previous tag for both `apps/backend` and `apps/frontend`.
-- [ ] 4b. Explicitly state that no rollback is executed this phase — there is no live deployment to
+- [x] 4b. Explicitly state that no rollback is executed this phase — there is no live deployment to
       roll back from. This is a documentation-only deliverable; execution proof is deferred to
       whichever Tier 2 phase performs the first real deploy.
 
 ### Step 5 — Backlog capture for Tier 2
 
-- [ ] 5a. Write `process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md` covering:
+- [x] 5a. Write `process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md` covering:
       real VPS deploy, CD pipeline (deploy job in CI), backup procedure proven against live
       `wmslite` on a real host, and an actually-executed rollback. Blocked on VPS provisioning.
-- [ ] 5b. Write `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md`
+      **Done (23-06-26):** file verified present and complete (written during INNOVATE).
+- [x] 5b. Write `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md`
       covering: whether the Phase 3 login rate limiter's cache backend needs to move to Redis (or
       similar) for correctness once the VPS deployment runs multiple app instances. Blocked on VPS
+      **Done (23-06-26):** file verified present and complete (written during INNOVATE).
       topology being decided.
 
 ---
