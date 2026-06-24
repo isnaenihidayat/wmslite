@@ -13,7 +13,7 @@ metadata:
 
 **Date:** 19-06-26
 **Complexity:** COMPLEX
-**Status:** ⏳ PLANNED
+**Status:** ✅ COMPLETE (Tier 1 scope — see backlog for Tier 2)
 
 - Program type: PHASE PROGRAM (5 phases, sequential with gated joins)
 - Date: 19-06-26
@@ -137,7 +137,7 @@ START: Phase 1, loop step RESEARCH (pending). Spawn vc-research-agent for Phase 
 | 2 — Data Model & Auth Hardening | `process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md` | Resolve all-context.md Open Questions (shadow `_s` tables, shipment status flow, role checks -> Policy/Gate), fix bugs Phase 1 surfaced | Phase 1 |
 | 3 — Security & Validation Audit | `process/features/go-live/active/go-live_19-06-26/phase-03-security-audit_PLAN_19-06-26.md` | OWASP-style review: authZ per endpoint, input validation, Sanctum token policy, login rate limiting | Phase 1 + Phase 2 |
 | 4 — Deployment Readiness | `process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_PLAN_19-06-26.md` | Staging/production environment, CI running Phase 1 tests on push, production `.env`, DB backup/rollback plan | Phase 1 + Phase 2 + Phase 3 |
-| 5 — Legacy Yii Cutover Plan | `process/features/go-live/active/go-live_19-06-26/phase-05-yii-cutover_PLAN_19-06-26.md` | Per-module Yii retirement plan using `API_INVENTORY.md`, parallel-run validation, rollback plan | Phase 1 + Phase 2 + Phase 3 + Phase 4 |
+| 5 — Legacy Yii Cutover Plan | `process/features/go-live/active/go-live_19-06-26/phase-05-yii-cutover_PLAN_19-06-26.md` | Per-module Yii retirement plan using a 3-signal classification (test coverage, complexity, independence — `API_INVENTORY.md` confirmed stale as a parity basis), parallel-run validation, rollback plan; Tier 1 = local proof on Monitoring + 8-module plan, Tier 2 = production `elog.id` cutover deferred to backlog | Phase 1 + Phase 2 + Phase 3 + Phase 4 |
 
 ### Join Conditions
 
@@ -221,7 +221,7 @@ During /goal execution of a phase program:
 | 02 — Data Model & Auth Hardening | ✅ VERIFIED |
 | 03 — Security & Validation Audit | ✅ VERIFIED |
 | 04 — Deployment Readiness | ✅ VERIFIED (Tier 1 only) |
-| 05 — Legacy Yii Cutover Plan | ⏳ PLANNED |
+| 05 — Legacy Yii Cutover Plan | ✅ VERIFIED (Tier 1) |
 
 Status values: ⏳ PLANNED | 🔨 CODE DONE | 🧪 TESTING | ✅ VERIFIED | 🚧 BLOCKED | ✅ COMPLETE
 
@@ -243,7 +243,7 @@ Status values: ⏳ PLANNED | 🔨 CODE DONE | 🧪 TESTING | ✅ VERIFIED | 🚧
 
 - Existing API response shapes (`{data, message, status}` for Laravel target endpoints) must not change shape as part of this program — only coverage and correctness improve.
 - Existing frontend routes/URLs must not change as part of this program.
-- Legacy Yii endpoints retired in Phase 5 must have a confirmed Laravel parity endpoint per `API_INVENTORY.md` before retirement.
+- Legacy Yii endpoints retired in Phase 5 must have a confirmed, directly-verified Laravel parity endpoint before retirement — `API_INVENTORY.md` is a pre-implementation target doc, not an implementation record, and must not be used alone as the parity basis (confirmed stale during Phase 5 RESEARCH, 24-06-26).
 
 ---
 
@@ -297,35 +297,15 @@ node .claude/skills/vc-audit-context/scripts/validate-context-discovery.mjs
 
 ## Current Execution State
 
-Last updated: 23-06-26
-Completed phases: Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 (Tier 1)
-Current phase: Phase 5 — Legacy Yii Cutover Plan
-Current loop step: RESEARCH (pending — not yet started)
-Validate-contract status: Phase 1+2+3+4 written and accepted (Phase 3 CONDITIONAL accepted as-is; Phase 4 CONDITIONAL accepted as-is, all 4 concerns resolved via execute-agent instructions); Phase 5 pending
-Program Net Gate: PENDING
-Latest validator run: 23-06-26 — backend `composer test` 181 tests/474 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `npm run lint` 0 errors (13 pre-existing unrelated warnings, down from 7 errors fixed in Phase 4); `npm run build` succeeds; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures; real GitHub Actions CI run green (`28009757927`)
+Last updated: 24-06-26
+Completed phases: Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 (Tier 1), Phase 5 (Tier 1)
+Current phase: NONE — program complete (Tier 1 scope)
+Current loop step: n/a — all 5 phases closed
+Validate-contract status: Phase 1+2+3+4+5 all written and accepted (Phase 3 CONDITIONAL accepted as-is; Phase 4 CONDITIONAL accepted as-is, all 4 concerns resolved via execute-agent instructions; Phase 5 CONDITIONAL accepted as-is, 2 concerns noted — 1 structural Yii-side test-infra ceiling with no available fix, 1 corrected in-plan during the same PVL pass)
+Program Net Gate: CONDITIONAL — Tier 1 complete across all 5 phases, Tier 2 (real staging/production deployment, real production Yii cutover) deferred to backlog. Not a clean PASS because no real production deploy or production cutover has ever occurred — consistent with the Phase 4 precedent.
+Latest validator run: 24-06-26 — backend `composer test` 181 tests/474 assertions 0 failures; frontend `npm run test` 14 files/19 tests 0 failures; `validate-all-context.mjs` and `validate-context-discovery.mjs` both 0 warnings/0 failures; `php -l protected/controllers/OtrController.php` clean at every stage of the Phase 5 redirect/revert/re-apply cycle
 
-Phase 4 report: `process/features/go-live/active/go-live_19-06-26/phase-04-deployment-readiness_REPORT_19-06-26.md`
-
-Phase 4 closeout notes for Phase 5 RESEARCH:
-- CI now exists and is green (`.github/workflows/ci.yml`, backend + frontend jobs) — any Phase 5
-  Yii cutover work that touches backend/frontend code runs through CI on every push to `main` and
-  must keep it green.
-- `apps/backend/composer.json` declares `"php": "^8.3"` but `composer.lock` resolves dependencies
-  requiring PHP >=8.4 — stale constraint string, not yet fixed (out of Phase 4's blast radius). See
-  `process/features/go-live/backlog/composer-php-constraint-stale_NOTE_23-06-26.md`.
-- Tier 2 deployment items remain blocked on VPS provisioning: real VPS deploy, CD pipeline, backup
-  proven against the live `wmslite` database, an actually-executed rollback, and the rate-limiter
-  cache backend decision. See `process/features/go-live/backlog/vps-deploy-cd-pipeline_NOTE_23-06-26.md`
-  and `process/features/go-live/backlog/rate-limiter-cache-backend_NOTE_23-06-26.md`. Phase 5's Yii
-  cutover *plan* can still be written, but full cutover execution likely cannot complete until a
-  real hosting target exists.
-- Env var documentation (`apps/backend/.env.example`, `apps/frontend/.env.local.example`,
-  `all-context.md` Env var groups) is now complete and current for everything that exists today —
-  any new env var introduced in Phase 5 should be added to all three in the same pass.
-- Still open from earlier phases (unchanged by Phase 4): `crud-store-read-authz_NOTE_22-06-26.md`,
-  `csp-header_NOTE_22-06-26.md`, `module-scoped-data-filtering_NOTE_21-06-26.md`,
-  `tables-schema-staleness_NOTE_21-06-26.md`.
+Phase 5 report: `process/features/go-live/active/go-live_19-06-26/phase-05-yii-cutover_REPORT_19-06-26.md`
 
 Loop step values: RESEARCH | INNOVATE | PLAN-SUPPLEMENT | PVL | EXECUTE | EVL | UPDATE-PROCESS
 Orchestrator rule: read "Current loop step" and "validate-contract status" before spawning any subagent. Never spawn execute-agent when loop step is RESEARCH, INNOVATE, PLAN-SUPPLEMENT, or PVL.
@@ -334,6 +314,58 @@ Note: The Stable Program Goal above is fixed. This section is the only part that
 
 ---
 
+## Program Closeout (24-06-26)
+
+All 5 phases reached VERIFIED for Tier 1 scope. The program's north star — taking WMS Lite from
+"all 9 modules functionally verified working locally, zero test coverage" to a state where it can
+be safely run in production with the legacy Yii app retired module by module — is reached for the
+**local, Tier-1 proof level** across every phase. No phase reached its Tier 2 (real production)
+scope; every phase that had a Tier split deferred Tier 2 to backlog by design (Phase 4: real VPS
+deploy/CD; Phase 5: real `elog.id` production cutover).
+
+### Per-Phase Summary
+
+| Phase | Outcome |
+|---|---|
+| 1 — Test Infrastructure Foundation | Real PHPUnit Feature/Unit coverage for all 9 backend modules; Vitest stood up for the frontend with smoke coverage of critical CRUD flows. 2 bugs found and fixed during test-writing (Inbound details endpoint, Shipment push-inbound interaction). |
+| 2 — Data Model & Auth Hardening | All `all-context.md` Open Questions resolved with code-confirmed answers (shadow `_s` tables = bulk/qty vs per-lot/serial, not staging-vs-confirmed; shipment status flow corrected; `el_apk`/`el_apk_s` confirmed as a separate unrelated exception). 3 new Policy classes formalize authz for `ApkUser`, `User`, and `Moving` — the remaining controllers (Inbound, Outbound, Shipment, master-data CRUD) still have zero authorization checks, tracked in backlog. |
+| 3 — Security & Validation Audit | OWASP-style audit found and fixed 2 Critical findings; remaining findings triaged into backlog (CSP header, CRUD store/read authz, module-scoped data filtering). |
+| 4 — Deployment Readiness | Real GitHub Actions CI pipeline stood up and confirmed green (`.github/workflows/ci.yml`, run `28009757927`); backup/rollback runbooks documented. Tier 2 (real VPS deploy, CD pipeline, a real executed rollback) deferred to backlog — no staging or production host exists yet. |
+| 5 — Legacy Yii Cutover Plan | `API_INVENTORY.md` confirmed stale as a parity basis; 3-signal classification produced a 9-module risk order; Monitoring module's local cutover mechanism proven end-to-end (redirect + rollback dry-run, both directions). 8-module remaining plan written. Tier 2 (real `elog.id` production cutover) deferred to backlog — that server runs live for warehouse staff today. |
+
+### All Program Backlog Items (15 files, `process/features/go-live/backlog/`)
+
+| File | Summary |
+|---|---|
+| `inbound-details-endpoint-bug_NOTE_20-06-26.md` | Inbound details endpoint bug found and fixed during Phase 1 test-writing |
+| `shipment-push-inbound-bug_NOTE_20-06-26.md` | Shipment push-inbound bug found and fixed during Phase 1 test-writing |
+| `shipment-push-inbound-interaction-test_NOTE_20-06-26.md` | Follow-up interaction-test coverage recommended for the push-inbound fix |
+| `module-scoped-data-filtering_NOTE_21-06-26.md` | Data filtering should be scoped per module/user, currently broader than necessary |
+| `policy-formalization-remaining-controllers_NOTE_21-06-26.md` | Inbound, Outbound, Shipment, and master-data CRUD controllers still have zero authorization checks — only Apk/User/Moving have Policies |
+| `tables-schema-staleness_NOTE_21-06-26.md` | `tables_schema.sql`/`adminer.sql` are stale relative to the live Yii codebase (missing columns/tables) |
+| `crud-store-read-authz_NOTE_22-06-26.md` | CRUD store/read endpoints need authorization hardening beyond what Phase 2's 3 Policies cover |
+| `csp-header_NOTE_22-06-26.md` | Content-Security-Policy header missing, recommended as part of broader security hardening |
+| `composer-php-constraint-stale_NOTE_23-06-26.md` | `composer.json` declares PHP `^8.3` but `composer.lock` resolves dependencies requiring PHP >=8.4 |
+| `rate-limiter-cache-backend_NOTE_23-06-26.md` | Rate-limiter cache backend decision deferred — needs a real hosting target to decide concretely |
+| `vps-deploy-cd-pipeline_NOTE_23-06-26.md` | Tier 2 — real VPS deploy, CD pipeline, backup proven against live DB, an actually-executed rollback; all blocked on provisioning |
+| `api-inventory-staleness_NOTE_24-06-26.md` | `API_INVENTORY.md` needs a full re-audit against the live Laravel implementation before being relied on again |
+| `legacy-main-php-plaintext-credentials_NOTE_24-06-26.md` | Plaintext MySQL/SMTP credentials committed in `protected/config/main.php`; rotate and move to env vars |
+| `yii-production-cutover-elogid_NOTE_24-06-26.md` | Tier 2 — real cutover of all 9 modules against the live `elog.id` production server, blocked on user scheduling |
+| `phase-05-remaining-modules-cutover-plan_REF_24-06-26.md` | (reference, not a NOTE) 8-module local cutover plan for the modules after Monitoring |
+
+### Task Folder Archival Recommendation
+
+The `go-live_19-06-26` task folder under `process/features/go-live/active/` is a strong candidate
+to move to `process/features/go-live/completed/` now that all 5 phases are VERIFIED. This is **not
+done automatically** — it is the user's call. Recommendation: move the umbrella plan and all 5 phase
+plans/reports/refs as one unit when ready; leave `process/features/go-live/backlog/` exactly where
+it is regardless of that decision (backlog items must stay easy to find and are not tied to the
+active/completed state of the originating program).
+
+---
+
 ## Validate Contract
 
-(placeholder — vc-validate-agent writes this section before EXECUTE)
+(placeholder — vc-validate-agent writes this section before EXECUTE; the umbrella plan itself was
+never executed as a unit — each phase wrote and accepted its own validate-contract. See each phase
+plan file's own "## Validate Contract" section.)

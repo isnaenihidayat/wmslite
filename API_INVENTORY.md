@@ -2,6 +2,23 @@
 > Dihasilkan dari audit `AjaxController.php` (6951 baris) dan `ApiController.php`
 > Digunakan sebagai referensi untuk membangun Laravel REST API
 
+> **⚠️ Staleness notice (added go-live Phase 5, 24-06-26):** This document is a
+> **pre-implementation target** mapping — it was written before the Laravel backend existed, not a
+> record of what was actually implemented. Go-live Phases 2 and 3 already found material gaps
+> between this target list and the live Laravel implementation in **Inbound, Outbound, Moving, and
+> Reports** (most concretely: `MovingController` has no `update` method at all — see the Step A1
+> classification table below). For actual implementation-readiness decisions (e.g. Yii cutover
+> ordering), cross-reference:
+> - the Step A1 module classification table in
+>   `process/features/go-live/active/go-live_19-06-26/phase-05-yii-cutover_PLAN_19-06-26.md`
+> - Phase 2/3 findings in
+>   `process/features/go-live/active/go-live_19-06-26/phase-02-data-model-auth-hardening_PLAN_19-06-26.md`
+>   and `phase-03-security-audit_PLAN_19-06-26.md`
+>
+> No full re-audit of this document has been performed as part of that staleness finding — see
+> `process/features/go-live/backlog/api-inventory-staleness_NOTE_24-06-26.md` for the deferred
+> full-re-audit backlog item.
+
 ---
 
 ## Konvensi Response (Yii saat ini)
