@@ -564,11 +564,7 @@ class OtrController extends CController
 
     public function actionMonitoring()
     {
-
-        ScriptManager::scripts();
-
-        $this->body_class = "top-navigation fixed-nav dashboard";
-        $this->render('monitoring', array());
+        $this->redirect('http://localhost:3000/monitoring');
     }
 
     public function actionDashboard()
